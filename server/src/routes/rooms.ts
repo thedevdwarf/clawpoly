@@ -1,47 +1,99 @@
 import { Router } from 'express';
+import { roomManager } from '../room/roomManager';
+import { loadGameState } from '../state/redisState';
+import { getEventLog } from '../state/redisState';
 
 const router = Router();
 
-// POST /api/v1/rooms — Create a new game room
-router.post('/', (_req, res) => {
-  // TODO: Implement room creation
-  res.status(501).json({ error: 'Not implemented' });
+router.post('/', async (req, res) => {
+  try {
+    const { name, maxPlayers, turnLimit, gameSpeed } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const room = await roomManager.createRoom(name, { maxPlayers, turnLimit, gameSpeed });
+    res.status(201).json(room);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET /api/v1/rooms — List available rooms
-router.get('/', (_req, res) => {
-  // TODO: Implement room listing
-  res.status(501).json({ error: 'Not implemented' });
+router.get('/', async (_req, res) => {
+  try {
+    const rooms = await roomManager.listRooms();
+    res.json({ rooms });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET /api/v1/rooms/:roomId — Get room details + state
-router.get('/:roomId', (_req, res) => {
-  // TODO: Implement room details
-  res.status(501).json({ error: 'Not implemented' });
+router.get('/:roomId', async (req, res) => {
+  try {
+    const room = await roomManager.getRoom(req.params.roomId);
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+    const state = await loadGameState(req.params.roomId);
+    const players = state?.players.map((p) => ({ id: p.id, name: p.name, token: p.token, color: p.color })) || [];
+    res.json({ ...room, players });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST /api/v1/rooms/:roomId/start — Start the game
-router.post('/:roomId/start', (_req, res) => {
-  // TODO: Implement game start
-  res.status(501).json({ error: 'Not implemented' });
+router.post('/:roomId/join', async (req, res) => {
+  try {
+    const { agentName, agentId } = req.body;
+    if (!agentName) return res.status(400).json({ error: 'agentName is required' });
+    const result = await roomManager.joinRoom(req.params.roomId, agentName, agentId);
+    res.json(result);
+  } catch (err: any) {
+    if (err.message === 'Room not found') return res.status(404).json({ error: err.message });
+    if (err.message === 'Room is full' || err.message === 'Game already started') return res.status(409).json({ error: err.message });
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// DELETE /api/v1/rooms/:roomId — Destroy a room
-router.delete('/:roomId', (_req, res) => {
-  // TODO: Implement room deletion
-  res.status(501).json({ error: 'Not implemented' });
+router.post('/:roomId/start', async (req, res) => {
+  try {
+    await roomManager.startGame(req.params.roomId);
+    res.json({ status: 'started' });
+  } catch (err: any) {
+    if (err.message === 'Room not found') return res.status(404).json({ error: err.message });
+    if (err.message.includes('Need at least') || err.message.includes('not in waiting')) return res.status(409).json({ error: err.message });
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET /api/v1/rooms/:roomId/state — Full game state snapshot
-router.get('/:roomId/state', (_req, res) => {
-  // TODO: Implement state snapshot
-  res.status(501).json({ error: 'Not implemented' });
+router.delete('/:roomId', async (req, res) => {
+  try {
+    const room = await roomManager.getRoom(req.params.roomId);
+    if (!room) return res.status(404).json({ error: 'Room not found' });
+    if (room.gamePhase !== 'waiting' && room.gamePhase !== 'finished') {
+      return res.status(409).json({ error: 'Can only delete rooms in waiting or finished state' });
+    }
+    await roomManager.deleteRoom(req.params.roomId);
+    res.json({ status: 'deleted' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// GET /api/v1/rooms/:roomId/log — Game event log
-router.get('/:roomId/log', (_req, res) => {
-  // TODO: Implement event log
-  res.status(501).json({ error: 'Not implemented' });
+router.get('/:roomId/state', async (req, res) => {
+  try {
+    const state = await loadGameState(req.params.roomId);
+    if (!state) return res.status(404).json({ error: 'Room not found' });
+    res.json(state);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:roomId/log', async (req, res) => {
+  try {
+    const from = parseInt(req.query.from as string) || 0;
+    const limit = parseInt(req.query.limit as string) || 50;
+    const events = await getEventLog(req.params.roomId, from, limit);
+    res.json({ events, from, limit });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;
