@@ -2,7 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { getRedis } from '../redis';
 import { generateRoomCode } from './roomCode';
 import { createInitialGameState } from '../state/gameState';
-import { saveGameState, loadGameState, appendEvent } from '../state/redisState';
+import { saveGameState, loadGameState, appendEvent, getEventLog, cleanupRoom } from '../state/redisState';
+import { persistGame, updateAgentStats } from '../state/mongoPersist';
 import { GameConfig, GameSpeed } from '../types/game';
 import { TokenType, TOKEN_COLORS } from '../types/player';
 import { determineTurnOrder } from '../engine/turnOrder';
@@ -196,6 +197,22 @@ class RoomManager {
       const finalState = engine.getState();
       await saveGameState(roomId, finalState);
       await redis.hset(`room:${roomId}`, 'gamePhase', 'finished');
+
+      // Persist to MongoDB
+      try {
+        const allEvents = await getEventLog(roomId, 0, 100000);
+        await persistGame(finalState, allEvents);
+        await updateAgentStats(finalState);
+      } catch (err) {
+        console.error(`[RoomManager] MongoDB persist error for room ${roomId}:`, err);
+      }
+
+      // Clean up Redis keys after 5 minutes
+      try {
+        await cleanupRoom(roomId, 5 * 60 * 1000);
+      } catch (err) {
+        console.error(`[RoomManager] Cleanup error for room ${roomId}:`, err);
+      }
     }).catch((err) => {
       console.error(`[RoomManager] Game error for room ${roomId}:`, err);
     });
