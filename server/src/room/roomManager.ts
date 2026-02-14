@@ -8,8 +8,24 @@ import { TokenType, TOKEN_COLORS } from '../types/player';
 import { determineTurnOrder } from '../engine/turnOrder';
 import { GameEngine } from '../engine/gameEngine';
 import { RandomAgent } from '../engine/agents/randomAgent';
+import { AgentDecision } from '../types/agent';
+import { broadcastEvent } from '../websocket/spectatorHandler';
 
 const ALL_TOKENS: TokenType[] = ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'];
+
+// Registered agents per room
+const registeredAgents = new Map<string, Map<string, AgentDecision>>();
+
+export function registerAgent(roomId: string, playerId: string, agent: AgentDecision): void {
+  if (!registeredAgents.has(roomId)) {
+    registeredAgents.set(roomId, new Map());
+  }
+  registeredAgents.get(roomId)!.set(playerId, agent);
+}
+
+export function getRegisteredAgents(roomId: string): Map<string, AgentDecision> {
+  return registeredAgents.get(roomId) || new Map();
+}
 
 interface RoomInfo {
   roomId: string;
@@ -157,10 +173,11 @@ class RoomManager {
     const redis = getRedis();
     await redis.hset(`room:${roomId}`, 'gamePhase', 'playing');
 
-    // Run game in background with RandomAgents
-    const agents = new Map<string, RandomAgent>();
+    // Use registered WebSocket agents, fall back to RandomAgent
+    const registered = getRegisteredAgents(roomId);
+    const agents = new Map<string, AgentDecision>();
     for (const player of state.players) {
-      agents.set(player.id, new RandomAgent());
+      agents.set(player.id, registered.get(player.id) || new RandomAgent());
     }
 
     const engine = new GameEngine(state, agents);
@@ -170,6 +187,8 @@ class RoomManager {
       } catch (err) {
         console.error(`[RoomManager] Failed to save event for room ${roomId}:`, err);
       }
+      // Broadcast to spectators
+      broadcastEvent(roomId, event);
     });
 
     // Run async, don't await
