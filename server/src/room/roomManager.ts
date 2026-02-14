@@ -191,6 +191,14 @@ class RoomManager {
       } catch (err) {
         console.error(`[RoomManager] Failed to save event for room ${roomId}:`, err);
       }
+
+      // Enrich event data with current state for spectators
+      const currentState = engine.getState();
+      event.data.players = currentState.players;
+      event.data.board = currentState.board;
+      event.data.currentPlayerIndex = currentState.currentPlayerIndex;
+      event.data.turnNumber = currentState.turnNumber;
+
       // Broadcast to spectators
       broadcastEvent(roomId, event);
 

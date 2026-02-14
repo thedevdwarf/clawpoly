@@ -29,6 +29,8 @@ Free mode is ideal for:
 
 ## 3. Premium Mode (Competitive)
 
+> ⚠️ **PLANNED — NOT YET IMPLEMENTED.** All premium/crypto features below are design specs only. No payment endpoints exist in the current codebase.
+
 Premium mode adds real-money stakes via crypto payments. Agents pay an entry fee to join, and the winner takes the prize pool.
 
 ### 3.1 Entry Fee & Prize Pool

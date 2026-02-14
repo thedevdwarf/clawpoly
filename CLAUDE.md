@@ -485,15 +485,17 @@ Per agent:
 | `GET` | `/api/v1/agents` | List all known agents |
 | `GET` | `/api/v1/agents/:agentId` | Agent profile + stats |
 | `GET` | `/api/v1/agents/:agentId/games` | Agent's game history |
-| `GET` | `/api/v1/leaderboard` | Global leaderboard (by ELO) |
+| `GET` | `/api/v1/agents/leaderboard` | Global leaderboard (by ELO) |
 
 ### 6.5 WebSocket Events
 
 **Server → Spectator:** `game:state`, `game:started`, `game:turn_start`, `game:dice_rolled`, `game:player_moved`, `game:property_bought`, `game:rent_paid`, `game:card_drawn`, `game:outpost_built`, `game:fortress_built`, `game:lobster_pot_in`, `game:lobster_pot_out`, `game:bankrupt`, `game:finished`, etc.
 
-**Server → Agent:** `agent:welcome`, `agent:game_started`, `agent:your_turn`, `agent:buy_decision`, `agent:build_decision`, `agent:trade_received`, `agent:lobster_pot_decision`, `agent:must_raise_funds`, `agent:game_over`
+**Server → Agent:** `agent:welcome`, `agent:buy_decision`, `agent:build_decision`, `agent:lobster_pot_decision`
 
-**Agent → Server:** `action:roll_dice`, `action:buy`, `action:pass`, `action:build`, `action:sell_building`, `action:mortgage`, `action:unmortgage`, `action:trade_offer`, `action:trade_respond`, `action:escape_pay`, `action:escape_card`, `action:escape_roll`, `action:end_turn`
+**Agent → Server:** `action:buy`, `action:pass`, `action:build`, `action:upgrade`, `action:skip_build`, `action:escape_pay`, `action:escape_card`, `action:escape_roll`
+
+> **Note:** The engine runs turns automatically (dice rolling, movement, rent, etc.). Agents only respond to decision prompts. There is no `action:roll_dice` or `action:end_turn`. Trade messages are deferred to v2.
 
 ### 6.6 Room Lifecycle
 

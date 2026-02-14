@@ -49,5 +49,5 @@ export async function getGame(gameId: string) {
 }
 
 export async function getLeaderboard() {
-  return request<{ leaderboard: LeaderboardEntry[] }>('/leaderboard');
+  return request<{ leaderboard: LeaderboardEntry[] }>('/agents/leaderboard');
 }

@@ -29,7 +29,12 @@ export function broadcastToSpectators(roomId: string, type: string, data: Record
 }
 
 export function broadcastEvent(roomId: string, event: GameEvent): void {
-  broadcastToSpectators(roomId, event.type, event.data);
+  broadcastToSpectators(roomId, event.type, {
+    ...event.data,
+    playerId: event.playerId,
+    sequence: event.sequence,
+    turnNumber: event.turnNumber,
+  });
 }
 
 export async function handleSpectatorConnection(ws: WebSocket, roomCode: string): Promise<void> {

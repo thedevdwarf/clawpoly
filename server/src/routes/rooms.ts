@@ -10,7 +10,15 @@ router.post('/', async (req, res) => {
     const { name, maxPlayers, turnLimit, gameSpeed } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
     const room = await roomManager.createRoom(name, { maxPlayers, turnLimit, gameSpeed });
-    res.status(201).json(room);
+    res.status(201).json({
+      id: room.roomId,
+      roomCode: room.roomCode,
+      name: room.roomName,
+      status: 'waiting',
+      playerCount: 0,
+      maxPlayers: room.maxPlayers,
+      createdAt: room.createdAt,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -19,7 +27,19 @@ router.post('/', async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const rooms = await roomManager.listRooms();
-    res.json({ rooms });
+    const transformed = await Promise.all(rooms.map(async (room) => {
+      const state = await loadGameState(room.roomId);
+      return {
+        id: room.roomId,
+        roomCode: room.roomCode,
+        name: room.roomName,
+        status: room.gamePhase,
+        playerCount: state?.players.length ?? 0,
+        maxPlayers: parseInt(room.maxPlayers) || 4,
+        createdAt: room.createdAt,
+      };
+    }));
+    res.json({ rooms: transformed });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -31,7 +51,16 @@ router.get('/:roomId', async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Room not found' });
     const state = await loadGameState(req.params.roomId);
     const players = state?.players.map((p) => ({ id: p.id, name: p.name, token: p.token, color: p.color })) || [];
-    res.json({ ...room, players });
+    res.json({
+      id: room.roomId,
+      roomCode: room.roomCode,
+      name: room.roomName,
+      status: room.gamePhase,
+      playerCount: players.length,
+      maxPlayers: parseInt(room.maxPlayers) || 4,
+      createdAt: room.createdAt,
+      players,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

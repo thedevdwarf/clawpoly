@@ -62,7 +62,12 @@ export class GameEngine {
 
   async runGame(): Promise<void> {
     this.state.gamePhase = 'playing';
-    this.emit('game:started', null, { players: this.state.players.map((p) => p.name) });
+    this.emit('game:started', null, {
+      players: this.state.players,
+      board: this.state.board,
+      currentPlayerIndex: this.state.currentPlayerIndex,
+      turnNumber: this.state.turnNumber,
+    });
 
     while (this.state.gamePhase === 'playing') {
       await this.executeTurn();
@@ -609,6 +614,7 @@ export class GameEngine {
       .sort((a, b) => b.netWorth - a.netWorth);
 
     this.emit('game:finished', winner.id, {
+      winner,
       winnerName: winner.name,
       totalTurns: this.state.turnNumber,
       standings,
