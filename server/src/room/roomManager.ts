@@ -182,6 +182,9 @@ class RoomManager {
     }
 
     const engine = new GameEngine(state, agents);
+    let eventCount = 0;
+    const STATE_SAVE_INTERVAL = 10; // Save state every N events
+
     engine.onEvent(async (event) => {
       try {
         await appendEvent(roomId, event);
@@ -190,6 +193,16 @@ class RoomManager {
       }
       // Broadcast to spectators
       broadcastEvent(roomId, event);
+
+      // Periodically save state for late-joining spectators
+      eventCount++;
+      if (eventCount % STATE_SAVE_INTERVAL === 0) {
+        try {
+          await saveGameState(roomId, engine.getState());
+        } catch (err) {
+          console.error(`[RoomManager] Failed to save periodic state for room ${roomId}:`, err);
+        }
+      }
     });
 
     // Run async, don't await

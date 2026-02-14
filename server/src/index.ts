@@ -14,7 +14,10 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins (configure specific origins in production)
+  credentials: true,
+}));
 app.use(express.json());
 
 // Routes

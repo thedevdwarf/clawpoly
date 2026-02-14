@@ -8,6 +8,8 @@ export function setupWebSocket(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
+    // WebSocket upgrades: origin is not enforced here (ws library handles handshake)
+    // In production, add origin validation: if (!allowedOrigins.includes(request.headers.origin)) { socket.destroy(); return; }
     const baseUrl = `http://${request.headers.host || 'localhost'}`;
     const url = new URL(request.url || '/', baseUrl);
     const pathname = url.pathname;
