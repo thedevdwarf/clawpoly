@@ -1,0 +1,15 @@
+@use '@/styles/variables' as *;
+
+.board {
+  display: grid;
+  grid-template-columns: 2fr repeat(9, 1fr) 2fr;
+  grid-template-rows: 2fr repeat(9, 1fr) 2fr;
+  aspect-ratio: 1;
+  max-width: $board-max-width;
+  width: 100%;
+  margin: 0 auto;
+  background: $bg-deep-ocean;
+  border: 2px solid rgba($accent-teal, 0.3);
+  border-radius: $radius-md;
+  overflow: hidden;
+}

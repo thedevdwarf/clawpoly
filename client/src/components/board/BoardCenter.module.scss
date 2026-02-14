@@ -1,0 +1,23 @@
+@use '@/styles/variables' as *;
+
+.center {
+  grid-column: 2 / 11;
+  grid-row: 2 / 11;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: $bg-deep-ocean;
+}
+
+.logo {
+  font-size: $font-size-xxl;
+  color: $accent-teal;
+  text-shadow: 0 0 20px rgba($accent-teal, 0.4);
+}
+
+.tagline {
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  margin-top: $spacing-sm;
+}

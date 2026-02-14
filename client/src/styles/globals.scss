@@ -1,0 +1,54 @@
+@use 'variables' as *;
+@use 'animations';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: $font-family;
+  background-color: $bg-deep-ocean;
+  color: $text-primary;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a {
+  color: $accent-teal;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: $bg-deep-ocean;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $surface-hover;
+  border-radius: $radius-sm;
+}

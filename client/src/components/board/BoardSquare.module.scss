@@ -1,0 +1,72 @@
+@use '@/styles/variables' as *;
+
+.square {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: $surface;
+  border: $board-square-border;
+  padding: 2px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: $surface-hover;
+  }
+
+  &.selected {
+    background: $surface-hover;
+    box-shadow: inset 0 0 0 2px $accent-teal;
+  }
+}
+
+.name {
+  font-size: $font-size-xs;
+  text-align: center;
+  line-height: 1.1;
+  color: $text-primary;
+  word-break: break-word;
+  padding: 1px;
+}
+
+.colorStrip {
+  position: absolute;
+  width: 100%;
+  height: 6px;
+}
+
+// Position the color strip based on square location
+.top .colorStrip {
+  bottom: 0;
+}
+
+.bottom .colorStrip {
+  top: 0;
+}
+
+.left .colorStrip {
+  top: 0;
+  left: auto;
+  right: 0;
+  width: 6px;
+  height: 100%;
+}
+
+.right .colorStrip {
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+}
+
+.corner {
+  font-size: $font-size-xs;
+  font-weight: 600;
+
+  .name {
+    font-size: $font-size-xs;
+  }
+}

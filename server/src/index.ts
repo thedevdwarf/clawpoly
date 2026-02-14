@@ -1,0 +1,59 @@
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+import { config } from './config';
+import { createRedisClient, disconnectRedis } from './redis';
+import { connectMongo, disconnectMongo } from './mongo';
+import { setupWebSocket } from './websocket';
+import healthRouter from './routes/health';
+import roomsRouter from './routes/rooms';
+import gamesRouter from './routes/games';
+import agentsRouter from './routes/agents';
+
+const app = express();
+const server = http.createServer(app);
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Routes
+app.use('/api/v1/health', healthRouter);
+app.use('/api/v1/rooms', roomsRouter);
+app.use('/api/v1/games', gamesRouter);
+app.use('/api/v1/agents', agentsRouter);
+
+// WebSocket
+setupWebSocket(server);
+
+// Start server
+async function start() {
+  try {
+    // Connect to databases
+    createRedisClient();
+    await connectMongo();
+
+    server.listen(config.port, () => {
+      console.log(`[Clawpoly] Server running on port ${config.port}`);
+      console.log(`[Clawpoly] Health check: http://localhost:${config.port}/api/v1/health`);
+      console.log(`[Clawpoly] Environment: ${config.nodeEnv}`);
+    });
+  } catch (err) {
+    console.error('[Clawpoly] Failed to start:', err);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+async function shutdown() {
+  console.log('\n[Clawpoly] Shutting down...');
+  await disconnectRedis();
+  await disconnectMongo();
+  server.close();
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+start();

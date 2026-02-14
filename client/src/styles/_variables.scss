@@ -1,0 +1,60 @@
+// === UI Colors (Ocean Theme) ===
+$bg-deep-ocean: #0a1628;
+$surface: #122040;
+$surface-hover: #1a3060;
+$text-primary: #e8f0ff;
+$text-secondary: #8899bb;
+$accent-teal: #00d4aa;
+$warning-coral: #ff6b6b;
+$success-sea-green: #4ecdc4;
+$shell-gold: #ffd700;
+
+// === Color Group Colors ===
+$sandy-shore: #8B6914;
+$coastal-waters: #87CEEB;
+$coral-gardens: #FF69B4;
+$tropical-seas: #FF8C00;
+$volcanic-depths: #DC143C;
+$sunlit-expanse: #FFD700;
+$the-deep: #228B22;
+$emperors-realm: #191970;
+
+// === Agent Token Colors ===
+$token-lobster: #e74c3c;
+$token-crab: #e67e22;
+$token-octopus: #9b59b6;
+$token-seahorse: #2ecc71;
+$token-dolphin: #3498db;
+$token-shark: #95a5a6;
+
+// === Spacing ===
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-xxl: 48px;
+
+// === Border Radius ===
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+
+// === Breakpoints ===
+$breakpoint-md: 768px;
+$breakpoint-lg: 1024px;
+$breakpoint-xl: 1280px;
+
+// === Typography ===
+$font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+$font-size-xs: 0.7rem;
+$font-size-sm: 0.8rem;
+$font-size-md: 1rem;
+$font-size-lg: 1.25rem;
+$font-size-xl: 1.5rem;
+$font-size-xxl: 2rem;
+
+// === Board ===
+$board-max-width: 800px;
+$board-square-border: 1px solid rgba($text-primary, 0.15);
