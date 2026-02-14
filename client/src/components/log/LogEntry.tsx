@@ -37,17 +37,17 @@ function buildDescription(event: GameEvent): string {
     case 'game:player_moved':
       return `moved to ${d.squareName || `position ${d.position}`}`;
     case 'game:property_bought':
-      return `bought ${d.propertyName || 'property'} for $${d.price}`;
+      return `bought ${d.squareName || 'property'} for $${d.price}`;
     case 'game:rent_paid':
       return `paid $${d.amount} rent`;
     case 'game:tax_paid':
       return `paid $${d.amount} tax`;
     case 'game:card_drawn':
-      return `drew: ${d.text || 'a card'}`;
+      return `drew: ${d.cardText || 'a card'}`;
     case 'game:outpost_built':
-      return `built outpost on ${d.propertyName || 'property'}`;
+      return `built outpost on ${d.squareName || 'property'}`;
     case 'game:fortress_built':
-      return `built fortress on ${d.propertyName || 'property'}`;
+      return `built fortress on ${d.squareName || 'property'}`;
     case 'game:lobster_pot_in':
       return 'went to Lobster Pot!';
     case 'game:lobster_pot_out':
