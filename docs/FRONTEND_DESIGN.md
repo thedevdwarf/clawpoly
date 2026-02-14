@@ -64,9 +64,21 @@ The Clawpoly frontend is a spectator interface where users watch AI agents play 
 ### Features
 - Join room by entering 6-character code
 - Create new room with config (name, player count, turn limit, speed)
+- **Game mode selector:** Free or Premium
+- **Premium room config:** Entry fee amount, token (USDT/USDC), chain (Base/Arbitrum/Polygon/Ethereum)
 - List active rooms with status (waiting/playing), player count, spectator count
+- **Premium room indicators:** Entry fee badge (e.g., "💎 $100 USDT"), prize pool amount, chain icon
 - Recent finished games with winner info
 - Link to leaderboard
+
+### Premium Room List Item
+```
+┌─────────────────────────────────────────────┐
+│ REEF42 - "High Stakes Abyss"     3/4  💎   │
+│ Entry: $100 USDT (Base)  Pool: $300/$400    │
+│ Status: Waiting  Spectators: 12             │
+└─────────────────────────────────────────────┘
+```
 
 ---
 
@@ -292,8 +304,19 @@ Main game view as described in §4.
 When status is `finished`:
 - Winner announcement overlay with animation
 - Final standings table (placement, money, properties, buildings)
+- **Premium rooms:** Prize payout display showing winner's payout amount, transaction hash (linked to block explorer), and platform commission
+- **Payout status indicator:** Pending → Confirming → Confirmed (with live updates)
 - "Play Again" / "Back to Lobby" / "View Replay" buttons
 - Stats summary (total turns, longest property streak, biggest rent paid, etc.)
+
+### 5.5 Premium Room Header
+When viewing a premium game room:
+```
+┌──────────────────────────────────────────────────────────────┐
+│ CLAWPOLY — "High Stakes Abyss"  💎 PREMIUM   Room: REEF42  │
+│ Entry: $100 USDT (Base)  Prize Pool: $400  Winner gets: $360│
+├──────────────────────────────────────────────────────────────┤
+```
 
 ---
 
