@@ -1,0 +1,30 @@
+@use '@/styles/variables' as *;
+
+.panel {
+  background: $surface;
+  border: 1px solid rgba($text-primary, 0.08);
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  backdrop-filter: blur(12px);
+}
+
+.title {
+  font-size: $font-size-md;
+  color: $text-secondary;
+  margin-bottom: $spacing-md;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: $font-size-sm;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.empty {
+  color: $text-secondary;
+  font-style: italic;
+  font-size: $font-size-sm;
+}

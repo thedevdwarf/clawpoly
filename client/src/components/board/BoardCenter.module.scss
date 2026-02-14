@@ -8,6 +8,7 @@
   align-items: center;
   justify-content: center;
   background: $bg-deep-ocean;
+  gap: $spacing-sm;
 }
 
 .logo {
@@ -19,5 +20,31 @@
 .tagline {
   color: $text-secondary;
   font-size: $font-size-sm;
+}
+
+.turnInfo {
+  text-align: center;
   margin-top: $spacing-sm;
+}
+
+.turn {
+  font-size: $font-size-lg;
+  color: $text-primary;
+  font-weight: 700;
+}
+
+.currentPlayer {
+  color: $accent-teal;
+  font-size: $font-size-md;
+}
+
+.playerTokens {
+  display: flex;
+  gap: $spacing-sm;
+  font-size: 1.5rem;
+  margin-top: $spacing-sm;
+}
+
+.miniToken {
+  transition: opacity 0.3s;
 }

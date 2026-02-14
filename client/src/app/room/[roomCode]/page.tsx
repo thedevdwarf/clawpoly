@@ -1,30 +1,72 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { useGameStore } from '@/stores/gameStore';
 import GameBoard from '@/components/board/GameBoard';
 import AgentPanel from '@/components/agents/AgentPanel';
 import GameLog from '@/components/log/GameLog';
 import ControlBar from '@/components/controls/ControlBar';
+import WaitingRoom from '@/components/game-states/WaitingRoom';
+import GameOverOverlay from '@/components/game-states/GameOverOverlay';
 import Header from '@/components/shared/Header';
+import styles from './GameRoom.module.scss';
 
-interface Props {
-  params: Promise<{ roomCode: string }>;
-}
+export default function GameRoomPage() {
+  const params = useParams();
+  const router = useRouter();
+  const roomCode = params.roomCode as string;
+  const { connected, connect, disconnect } = useWebSocket();
+  const roomStatus = useGameStore((s) => s.roomStatus);
+  const roomName = useGameStore((s) => s.roomName);
+  const turnNumber = useGameStore((s) => s.turnNumber);
 
-export default async function GameRoomPage({ params }: Props) {
-  const { roomCode } = await params;
+  useEffect(() => {
+    connect(roomCode);
+    return () => disconnect();
+  }, [roomCode, connect, disconnect]);
+
+  const handleLeave = () => {
+    disconnect();
+    useGameStore.getState().reset();
+    router.push('/');
+  };
 
   return (
-    <div>
+    <div className={styles.page}>
       <Header />
-      <main style={{ padding: '16px', maxWidth: 1280, margin: '0 auto' }}>
-        <p style={{ color: '#8899bb', marginBottom: 16 }}>Room: {roomCode}</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
-          <GameBoard />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <AgentPanel />
-            <GameLog />
+      <div className={styles.gameHeader}>
+        <span className={styles.roomInfo}>
+          {roomName && <strong>{roomName}</strong>}
+          {' '}Room: <code>{roomCode}</code>
+          {roomStatus === 'playing' && <> · Turn {turnNumber}</>}
+        </span>
+        <span className={styles.connectionStatus}>
+          {connected ? '🟢 Connected' : '🔴 Reconnecting...'}
+        </span>
+      </div>
+
+      {roomStatus === 'waiting' || roomStatus === 'ready' ? (
+        <WaitingRoom roomCode={roomCode} />
+      ) : roomStatus === 'finished' ? (
+        <>
+          <div className={styles.layout}>
+            <div className={styles.sidebar}><AgentPanel /></div>
+            <div className={styles.boardArea}><GameBoard /></div>
+            <div className={styles.logArea}><GameLog /></div>
           </div>
-          <ControlBar />
+          <GameOverOverlay onLeave={handleLeave} />
+        </>
+      ) : (
+        <div className={styles.layout}>
+          <div className={styles.sidebar}><AgentPanel /></div>
+          <div className={styles.boardArea}><GameBoard /></div>
+          <div className={styles.logArea}><GameLog /></div>
         </div>
-      </main>
+      )}
+
+      <ControlBar onLeave={handleLeave} />
     </div>
   );
 }

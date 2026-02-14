@@ -1,0 +1,164 @@
+@use '@/styles/variables' as *;
+
+.card {
+  background: $surface;
+  border: 1px solid rgba($text-primary, 0.08);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  backdrop-filter: blur(12px);
+}
+
+.cardTitle {
+  font-size: $font-size-xl;
+  margin-bottom: $spacing-md;
+  color: $text-primary;
+}
+
+.joinRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.input {
+  flex: 1;
+  padding: $spacing-sm $spacing-md;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-primary;
+  font-size: $font-size-md;
+  outline: none;
+
+  &:focus {
+    border-color: $accent-teal;
+  }
+
+  &::placeholder {
+    color: $text-secondary;
+  }
+}
+
+.btnPrimary {
+  padding: $spacing-sm $spacing-lg;
+  background: $accent-teal;
+  color: $bg-deep-ocean;
+  border-radius: $radius-md;
+  font-weight: 600;
+  font-size: $font-size-md;
+  transition: opacity 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.btnSecondary {
+  padding: $spacing-sm $spacing-lg;
+  background: transparent;
+  border: 1px solid $accent-teal;
+  color: $accent-teal;
+  border-radius: $radius-md;
+  font-weight: 600;
+  font-size: $font-size-md;
+
+  &:hover {
+    background: rgba($accent-teal, 0.1);
+  }
+}
+
+.formGroup {
+  margin-bottom: $spacing-md;
+
+  label {
+    display: block;
+    color: $text-secondary;
+    font-size: $font-size-sm;
+    margin-bottom: $spacing-xs;
+  }
+}
+
+.btnGroup {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.btnOption {
+  padding: $spacing-xs $spacing-md;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  transition: all 0.2s;
+
+  &.active {
+    background: rgba($accent-teal, 0.15);
+    border-color: $accent-teal;
+    color: $accent-teal;
+  }
+}
+
+.roomCode {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: $accent-teal;
+  text-align: center;
+  letter-spacing: 0.2em;
+  margin: $spacing-md 0;
+}
+
+.hint {
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  text-align: center;
+}
+
+.error {
+  color: $warning-coral;
+  font-size: $font-size-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.roomList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.roomItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($bg-deep-ocean, 0.5);
+  border-radius: $radius-md;
+  color: $text-primary;
+  text-decoration: none;
+  transition: background 0.2s;
+
+  &:hover {
+    background: $surface-hover;
+    text-decoration: none;
+  }
+}
+
+.roomItemCode {
+  font-weight: 700;
+  color: $accent-teal;
+  font-family: monospace;
+  min-width: 70px;
+}
+
+.roomItemName {
+  flex: 1;
+}
+
+.roomItemStatus {
+  color: $text-secondary;
+  font-size: $font-size-sm;
+}

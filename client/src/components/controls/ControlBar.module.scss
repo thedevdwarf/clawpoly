@@ -1,0 +1,29 @@
+@use '@/styles/variables' as *;
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-lg;
+  border-top: 1px solid rgba($text-primary, 0.08);
+  background: $surface;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.leaveBtn {
+  padding: $spacing-xs $spacing-md;
+  background: rgba($warning-coral, 0.15);
+  border: 1px solid $warning-coral;
+  color: $warning-coral;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+
+  &:hover {
+    background: rgba($warning-coral, 0.25);
+  }
+}

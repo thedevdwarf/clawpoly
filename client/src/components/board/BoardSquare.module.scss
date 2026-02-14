@@ -12,6 +12,7 @@
   overflow: hidden;
   cursor: pointer;
   transition: background 0.2s;
+  gap: 1px;
 
   &:hover {
     background: $surface-hover;
@@ -20,6 +21,10 @@
   &.selected {
     background: $surface-hover;
     box-shadow: inset 0 0 0 2px $accent-teal;
+  }
+
+  &.mortgaged {
+    opacity: 0.45;
   }
 }
 
@@ -32,13 +37,42 @@
   padding: 1px;
 }
 
+.price {
+  font-size: 0.55rem;
+  color: $shell-gold;
+  font-weight: 600;
+}
+
+.ownerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.buildings {
+  font-size: 0.5rem;
+  line-height: 1;
+  color: $text-secondary;
+}
+
+.tokens {
+  display: flex;
+  gap: 1px;
+  font-size: 0.6rem;
+  margin-top: 1px;
+}
+
+.token {
+  font-size: 0.65rem;
+}
+
 .colorStrip {
   position: absolute;
   width: 100%;
   height: 6px;
 }
 
-// Position the color strip based on square location
 .top .colorStrip {
   bottom: 0;
 }
@@ -63,7 +97,6 @@
 }
 
 .corner {
-  font-size: $font-size-xs;
   font-weight: 600;
 
   .name {

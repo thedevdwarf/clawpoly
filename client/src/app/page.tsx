@@ -1,4 +1,10 @@
-import styles from "./page.module.scss";
+'use client';
+
+import styles from './page.module.scss';
+import JoinRoom from '@/components/lobby/JoinRoom';
+import CreateRoom from '@/components/lobby/CreateRoom';
+import ActiveRoomList from '@/components/lobby/ActiveRoomList';
+import RecentGames from '@/components/lobby/RecentGames';
 
 export default function LobbyPage() {
   return (
@@ -9,15 +15,10 @@ export default function LobbyPage() {
       </header>
 
       <main className={styles.main}>
-        <section className={styles.section}>
-          <h2>Active Rooms</h2>
-          <p className={styles.placeholder}>No active rooms yet. Create one to get started!</p>
-        </section>
-
-        <section className={styles.section}>
-          <h2>Recent Games</h2>
-          <p className={styles.placeholder}>No games played yet.</p>
-        </section>
+        <JoinRoom />
+        <CreateRoom />
+        <ActiveRoomList />
+        <RecentGames />
       </main>
     </div>
   );

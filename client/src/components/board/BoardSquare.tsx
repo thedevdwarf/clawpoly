@@ -2,12 +2,12 @@
 
 import { memo } from 'react';
 import styles from './BoardSquare.module.scss';
-import { COLOR_GROUP_COLORS } from '@/lib/constants';
+import { COLOR_GROUP_COLORS, TOKEN_EMOJIS } from '@/lib/constants';
 import { ColorGroup } from '@/types/square';
 import { useGameStore } from '@/stores/gameStore';
 import { classNames } from '@/lib/utils';
+import { TokenType } from '@/types/player';
 
-// Static color group mapping by board position
 const SQUARE_COLOR_GROUPS: Record<number, ColorGroup> = {
   1: 'Sandy Shore', 3: 'Sandy Shore',
   6: 'Coastal Waters', 8: 'Coastal Waters', 9: 'Coastal Waters',
@@ -30,9 +30,17 @@ interface BoardSquareProps {
 const BoardSquare = memo(function BoardSquare({ index, name, row, col, position }: BoardSquareProps) {
   const selectedSquare = useGameStore((s) => s.selectedSquare);
   const selectSquare = useGameStore((s) => s.selectSquare);
+  const board = useGameStore((s) => s.board);
+  const players = useGameStore((s) => s.players);
+
+  const square = board[index];
   const colorGroup = SQUARE_COLOR_GROUPS[index];
   const colorHex = colorGroup ? COLOR_GROUP_COLORS[colorGroup] : undefined;
   const isSelected = selectedSquare === index;
+  const isMortgaged = square?.mortgaged;
+
+  const playersHere = players.filter((p) => p.position === index && !p.isBankrupt);
+  const owner = square?.owner ? players.find((p) => p.id === square.owner) : null;
 
   return (
     <div
@@ -40,18 +48,36 @@ const BoardSquare = memo(function BoardSquare({ index, name, row, col, position 
         styles.square,
         styles[position],
         isSelected && styles.selected,
+        isMortgaged && styles.mortgaged,
       )}
       style={{ gridRow: row, gridColumn: col }}
       onClick={() => selectSquare(isSelected ? null : index)}
       title={name}
     >
       {colorHex && (
-        <div
-          className={styles.colorStrip}
-          style={{ backgroundColor: colorHex }}
-        />
+        <div className={styles.colorStrip} style={{ backgroundColor: colorHex }} />
       )}
       <span className={styles.name}>{name}</span>
+      {square?.price != null && square.price > 0 && (
+        <span className={styles.price}>${square.price}</span>
+      )}
+      {owner && (
+        <span className={styles.ownerDot} style={{ backgroundColor: owner.color }} />
+      )}
+      {square && square.outposts > 0 && (
+        <span className={styles.buildings}>
+          {square.fortress ? '🏰' : '▪'.repeat(square.outposts)}
+        </span>
+      )}
+      {playersHere.length > 0 && (
+        <div className={styles.tokens}>
+          {playersHere.map((p) => (
+            <span key={p.id} className={styles.token} title={p.name}>
+              {TOKEN_EMOJIS[p.token as TokenType] || '●'}
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 });

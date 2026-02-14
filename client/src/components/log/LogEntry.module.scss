@@ -1,0 +1,33 @@
+@use '@/styles/variables' as *;
+
+.entry {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-xs;
+  padding: 3px $spacing-sm;
+  border-left: 2px solid transparent;
+  font-size: $font-size-sm;
+  line-height: 1.4;
+
+  &:hover {
+    background: rgba($text-primary, 0.03);
+  }
+}
+
+.icon {
+  font-size: $font-size-sm;
+  flex-shrink: 0;
+}
+
+.turn {
+  color: $text-secondary;
+  font-size: $font-size-xs;
+  font-family: monospace;
+  min-width: 28px;
+  flex-shrink: 0;
+}
+
+.text {
+  color: $text-primary;
+  font-size: $font-size-sm;
+}

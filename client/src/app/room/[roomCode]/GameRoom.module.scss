@@ -1,0 +1,66 @@
+@use '@/styles/variables' as *;
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.gameHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-lg;
+  border-bottom: 1px solid rgba($text-primary, 0.08);
+  font-size: $font-size-sm;
+}
+
+.roomInfo {
+  color: $text-secondary;
+
+  strong {
+    color: $text-primary;
+  }
+
+  code {
+    color: $accent-teal;
+    font-weight: 700;
+  }
+}
+
+.connectionStatus {
+  font-size: $font-size-xs;
+}
+
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: 1fr;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+
+  @media (max-width: $breakpoint-xl) {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+}
+
+.sidebar {
+  overflow-y: auto;
+  max-height: calc(100vh - 180px);
+}
+
+.boardArea {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.logArea {
+  overflow-y: auto;
+  max-height: calc(100vh - 180px);
+}
