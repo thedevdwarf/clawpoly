@@ -440,7 +440,7 @@ GameState {
   turnNumber: number
   tideCards: Card[]
   treasureChestCards: Card[]
-  gamePhase: 'setup' | 'playing' | 'finished'
+  gamePhase: 'waiting' | 'ready' | 'roll_order' | 'playing' | 'paused' | 'finished'
   gameSpeed: 'slow' | 'normal' | 'fast' | 'instant'
   winner: Player | null
 }
