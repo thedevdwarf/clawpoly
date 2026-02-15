@@ -110,7 +110,7 @@ export class GameEngine {
       turnNumber: this.state.turnNumber,
     });
 
-    while (this.state.gamePhase !== 'finished') {
+    while (this.state.gamePhase === 'playing' || this.state.gamePhase === 'paused') {
       await this.executeTurn();
 
       if (this.checkGameEnd()) break;
