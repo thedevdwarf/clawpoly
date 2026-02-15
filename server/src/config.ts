@@ -13,3 +13,11 @@ export const config = {
   logLevel: process.env.LOG_LEVEL || 'info',
   nodeEnv: process.env.NODE_ENV || 'development',
 };
+
+export const SPEED_DELAYS: Record<string, number> = {
+  very_slow: 2000,
+  slow: 1000,
+  normal: 500,
+  fast: 250,
+  instant: 0,
+};

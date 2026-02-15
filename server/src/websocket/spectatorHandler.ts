@@ -1,8 +1,9 @@
 import WebSocket from 'ws';
 import { getRedis } from '../redis';
-import { loadGameState } from '../state/redisState';
+import { loadGameState, getEventLog } from '../state/redisState';
 import { WSMessage } from '../types/messages';
 import { GameEvent } from '../types/game';
+import { pauseGame, resumeGame } from '../room/roomManager';
 
 function sendMessage(ws: WebSocket, type: string, data: Record<string, unknown>): void {
   if (ws.readyState === WebSocket.OPEN) {
@@ -60,6 +61,20 @@ export async function handleSpectatorConnection(ws: WebSocket, roomCode: string)
   const state = await loadGameState(roomId);
   if (state) {
     sendMessage(ws, 'game:state', state as unknown as Record<string, unknown>);
+    // Also send pause state explicitly
+    if (state.gamePhase === 'paused') {
+      sendMessage(ws, 'game:paused', { paused: true });
+    }
+  }
+
+  // Send event log history
+  try {
+    const events = await getEventLog(roomId, 0, 1000);
+    if (events.length > 0) {
+      sendMessage(ws, 'game:history', { events });
+    }
+  } catch (err) {
+    console.error(`[Spectator] Failed to load event history for room ${roomId}:`, err);
   }
 
   // Handle spectator commands
@@ -67,12 +82,21 @@ export async function handleSpectatorConnection(ws: WebSocket, roomCode: string)
     try {
       const msg = JSON.parse(raw.toString()) as WSMessage;
       switch (msg.type) {
-        case 'spectator:set_speed':
         case 'spectator:pause':
-        case 'spectator:resume':
-          // TODO: Implement speed control when game loop supports it
-          sendMessage(ws, 'error', { code: 'NOT_IMPLEMENTED', message: 'Speed control not yet implemented' });
+          if (pauseGame(roomId)) {
+            console.log(`[Spectator] Game paused in room ${roomId}`);
+          } else {
+            sendMessage(ws, 'error', { code: 'CANNOT_PAUSE', message: 'Game is already paused or finished' });
+          }
           break;
+        case 'spectator:resume':
+          if (resumeGame(roomId)) {
+            console.log(`[Spectator] Game resumed in room ${roomId}`);
+          } else {
+            sendMessage(ws, 'error', { code: 'CANNOT_RESUME', message: 'Game is not paused or finished' });
+          }
+          break;
+        case 'spectator:set_speed':
         default:
           sendMessage(ws, 'error', { code: 'INVALID_ACTION', message: `Unknown command: ${msg.type}` });
       }

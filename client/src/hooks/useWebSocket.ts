@@ -5,13 +5,13 @@ import { useGameStore } from '@/stores/gameStore';
 import { GameState } from '@/types/game';
 import { Player } from '@/types/player';
 import { Square } from '@/types/square';
+import { setWebSocket, getWebSocket } from './webSocketInstance';
 
 const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000';
 const MAX_RETRY_DELAY = 30000;
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const roomCodeRef = useRef<string | null>(null);
@@ -25,6 +25,10 @@ export function useWebSocket() {
     switch (msg.type) {
       case 'game:state': {
         const gs = msg.data as GameState;
+        // Clear event log when connecting to a new room
+        if (s.roomId !== gs.roomId) {
+          store.setState({ eventLog: [] });
+        }
         s.setPlayers(gs.players);
         s.setBoard(gs.board);
         s.setCurrentPlayerIndex(gs.currentPlayerIndex);
@@ -33,6 +37,23 @@ export function useWebSocket() {
         s.setGameSpeed(gs.gameSpeed);
         s.setWinner(gs.winner);
         store.setState({ roomId: gs.roomId, roomName: gs.roomName, roomCode: gs.roomCode });
+        break;
+      }
+      case 'game:history': {
+        const events = msg.data.events as Array<{ type: string; data: Record<string, unknown>; turnNumber?: number; playerId?: string; timestamp?: string }>;
+        // Clear existing log and load all historical events
+        store.setState({ eventLog: [] });
+        for (const ev of events) {
+          s.addEvent({
+            id: crypto.randomUUID(),
+            sequence: 0,
+            turnNumber: ev.turnNumber ?? 0,
+            type: ev.type,
+            playerId: ev.playerId ?? null,
+            data: ev.data,
+            timestamp: ev.timestamp || new Date().toISOString(),
+          });
+        }
         break;
       }
       case 'game:dice_rolled':
@@ -72,6 +93,12 @@ export function useWebSocket() {
         if (msg.data.winner) s.setWinner(msg.data.winner as Player);
         if (msg.data.players) s.setPlayers(msg.data.players as Player[]);
         break;
+      case 'game:paused':
+        s.setRoomStatus('paused');
+        break;
+      case 'game:resumed':
+        s.setRoomStatus('playing');
+        break;
       case 'game:started':
         s.setRoomStatus('playing');
         if (msg.data.players) s.setPlayers(msg.data.players as Player[]);
@@ -82,27 +109,32 @@ export function useWebSocket() {
       case 'room:player_reconnected':
         if (msg.data.players) s.setPlayers(msg.data.players as Player[]);
         break;
+      case 'error':
+        console.error('[useWebSocket] Server error:', msg.data);
+        break;
     }
   }, [store]);
 
   const connect = useCallback((roomCode: string) => {
     roomCodeRef.current = roomCode;
-    if (wsRef.current) {
-      wsRef.current.close();
+    const ws = getWebSocket();
+    if (ws.current) {
+      ws.current.close();
     }
 
-    const ws = new WebSocket(`${WS_BASE}/ws/spectator?roomCode=${roomCode}`);
-    wsRef.current = ws;
+    const newWs = new WebSocket(`${WS_BASE}/ws/spectator?roomCode=${roomCode}`);
+    setWebSocket(newWs);
+    ws.current = newWs;
 
-    ws.onopen = () => {
+    ws.current.onopen = () => {
       setConnected(true);
       store.getState().setConnected(true);
       retryRef.current = 0;
     };
 
-    ws.onmessage = handleMessage;
+    ws.current.onmessage = handleMessage;
 
-    ws.onclose = () => {
+    ws.current.onclose = () => {
       setConnected(false);
       store.getState().setConnected(false);
       // Auto-reconnect with exponential backoff
@@ -115,21 +147,47 @@ export function useWebSocket() {
       }
     };
 
-    ws.onerror = () => {
-      ws.close();
+    ws.current.onerror = () => {
+      ws.current?.close();
     };
   }, [handleMessage, store]);
+
+  const pause = useCallback(() => {
+    const ws = getWebSocket();
+    console.log('[useWebSocket] pause called, ws:', ws.current, 'readyState:', ws.current?.readyState);
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      const msg = JSON.stringify({ type: 'spectator:pause', data: {} });
+      console.log('[useWebSocket] sending pause message:', msg);
+      ws.current.send(msg);
+    } else {
+      console.error('[useWebSocket] Cannot pause - WebSocket not ready');
+    }
+  }, []);
+
+  const resume = useCallback(() => {
+    const ws = getWebSocket();
+    console.log('[useWebSocket] resume called, ws:', ws.current, 'readyState:', ws.current?.readyState);
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      const msg = JSON.stringify({ type: 'spectator:resume', data: {} });
+      console.log('[useWebSocket] sending resume message:', msg);
+      ws.current.send(msg);
+    } else {
+      console.error('[useWebSocket] Cannot resume - WebSocket not ready');
+    }
+  }, []);
 
   const disconnect = useCallback(() => {
     roomCodeRef.current = null;
     if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    const ws = getWebSocket();
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+      setWebSocket(null);
     }
     setConnected(false);
     store.getState().setConnected(false);
   }, [store]);
 
-  return { connected, connect, disconnect };
+  return { connected, connect, disconnect, pause, resume };
 }

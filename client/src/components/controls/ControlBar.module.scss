@@ -15,6 +15,29 @@
   gap: $spacing-md;
 }
 
+.pauseBtn {
+  padding: $spacing-xs $spacing-md;
+  background: rgba($accent-teal, 0.15);
+  border: 1px solid $accent-teal;
+  color: $accent-teal;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+
+  &:hover {
+    background: rgba($accent-teal, 0.25);
+  }
+
+  &.paused {
+    background: rgba($warning-coral, 0.15);
+    border-color: $warning-coral;
+    color: $warning-coral;
+
+    &:hover {
+      background: rgba($warning-coral, 0.25);
+    }
+  }
+}
+
 .leaveBtn {
   padding: $spacing-xs $spacing-md;
   background: rgba($warning-coral, 0.15);

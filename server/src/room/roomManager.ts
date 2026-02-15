@@ -10,12 +10,15 @@ import { determineTurnOrder } from '../engine/turnOrder';
 import { GameEngine } from '../engine/gameEngine';
 import { RandomAgent } from '../engine/agents/randomAgent';
 import { AgentDecision } from '../types/agent';
-import { broadcastEvent } from '../websocket/spectatorHandler';
+import { broadcastEvent, broadcastToSpectators } from '../websocket/spectatorHandler';
 
 const ALL_TOKENS: TokenType[] = ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'];
 
 // Registered agents per room
 const registeredAgents = new Map<string, Map<string, AgentDecision>>();
+
+// Active game engines per room (for pause/resume control)
+const gameEngines = new Map<string, GameEngine>();
 
 export function registerAgent(roomId: string, playerId: string, agent: AgentDecision): void {
   if (!registeredAgents.has(roomId)) {
@@ -26,6 +29,26 @@ export function registerAgent(roomId: string, playerId: string, agent: AgentDeci
 
 export function getRegisteredAgents(roomId: string): Map<string, AgentDecision> {
   return registeredAgents.get(roomId) || new Map();
+}
+
+export function pauseGame(roomId: string): boolean {
+  const engine = gameEngines.get(roomId);
+  if (engine && !engine.isPaused()) {
+    engine.pause();
+    broadcastToSpectators(roomId, 'game:paused', { paused: true });
+    return true;
+  }
+  return false;
+}
+
+export function resumeGame(roomId: string): boolean {
+  const engine = gameEngines.get(roomId);
+  if (engine && engine.isPaused()) {
+    engine.resume();
+    broadcastToSpectators(roomId, 'game:resumed', { paused: false });
+    return true;
+  }
+  return false;
 }
 
 interface RoomInfo {
@@ -51,7 +74,7 @@ class RoomManager {
     const roomId = uuidv4();
     const roomCode = generateRoomCode();
     const maxPlayers = config.maxPlayers || 4;
-    const gameSpeed = config.gameSpeed || 'normal';
+    const gameSpeed = config.gameSpeed || 'very_slow';
     const turnLimit = config.turnLimit ?? 200;
 
     const state = createInitialGameState(roomId, roomCode, name, { maxPlayers, gameSpeed, turnLimit });
@@ -151,6 +174,9 @@ class RoomManager {
     await redis.hset(`room:${roomId}:players`, playerId, JSON.stringify({ agentName, token: availableToken, color }));
     await redis.hset(`room:${roomId}:tokens`, agentToken, playerId);
 
+    // Broadcast player joined to spectators
+    broadcastToSpectators(roomId, 'room:player_joined', { players: state.players });
+
     return { playerId, agentToken, token: availableToken, color };
   }
 
@@ -182,6 +208,7 @@ class RoomManager {
     }
 
     const engine = new GameEngine(state, agents);
+    gameEngines.set(roomId, engine);
     let eventCount = 0;
     const STATE_SAVE_INTERVAL = 10; // Save state every N events
 

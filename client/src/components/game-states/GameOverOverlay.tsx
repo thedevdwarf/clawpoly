@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { TOKEN_EMOJIS } from '@/lib/constants';
 import { TokenType } from '@/types/player';
@@ -13,8 +14,9 @@ interface GameOverOverlayProps {
 export default function GameOverOverlay({ onLeave }: GameOverOverlayProps) {
   const winner = useGameStore((s) => s.winner);
   const players = useGameStore((s) => s.players);
+  const [hidden, setHidden] = useState(false);
 
-  if (!winner) return null;
+  if (!winner || hidden) return null;
 
   const sorted = [...players].sort((a, b) => {
     if (a.isBankrupt !== b.isBankrupt) return a.isBankrupt ? 1 : -1;
@@ -24,14 +26,16 @@ export default function GameOverOverlay({ onLeave }: GameOverOverlayProps) {
   return (
     <div className={styles.overlay}>
       <div className={styles.overlayCard}>
-        <h2 className={styles.heading}>🏆 Game Over!</h2>
+        <div className={styles.headerRow}>
+          <h2 className={styles.heading}>🏆 Game Over!</h2>
+          <button className={styles.closeBtn} onClick={() => setHidden(true)}>✕</button>
+        </div>
         <div className={styles.winnerSection}>
           <span className={styles.winnerToken}>{TOKEN_EMOJIS[winner.token as TokenType]}</span>
-          <span className={styles.winnerName}>{winner.name} wins!</span>
+          <span className={styles.winnerName}>{winner.name}</span>
           <span className={styles.winnerBalance}>{formatShells(winner.money)}</span>
         </div>
         <div className={styles.standings}>
-          <h3>Final Standings</h3>
           {sorted.map((p, i) => (
             <div key={p.id} className={styles.standingRow}>
               <span className={styles.rank}>#{i + 1}</span>

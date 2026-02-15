@@ -15,6 +15,7 @@ import {
 } from './building';
 import { resolveBankruptcy, calculateNetWorth } from './bankruptcy';
 import { executeCard, CardResult } from './cardExecutor';
+import { SPEED_DELAYS } from '../config';
 
 export class GameEngine {
   private state: GameState;
@@ -23,10 +24,38 @@ export class GameEngine {
   private eventSequence = 0;
   private consecutiveDoubles = 0;
   private lastRoll: DiceRoll | null = null;
+  private delayMs: number;
+  private paused = false;
+  private pausePromise: { resolve: () => void } | null = null;
 
   constructor(state: GameState, agents: Map<string, AgentDecision>) {
     this.state = state;
     this.agents = agents;
+    this.delayMs = SPEED_DELAYS[state.gameSpeed] || 500;
+  }
+
+  // --- Pause/Resume ---
+
+  pause(): void {
+    this.paused = true;
+    this.state.gamePhase = 'paused';
+  }
+
+  resume(): void {
+    console.log('[GameEngine] resume called, paused:', this.paused, 'pausePromise:', !!this.pausePromise);
+
+    if (this.pausePromise) {
+      console.log('[GameEngine] Resolving pause promise');
+      this.pausePromise.resolve();
+      this.pausePromise = null;
+    }
+
+    this.paused = false;
+    console.log('[GameEngine] Set paused to false');
+  }
+
+  isPaused(): boolean {
+    return this.paused;
   }
 
   // --- Event System ---
@@ -35,7 +64,21 @@ export class GameEngine {
     this.eventCallbacks.push(callback);
   }
 
-  private emit(type: string, playerId: string | null, data: Record<string, unknown>): GameEvent {
+  private async delay(): Promise<void> {
+    // If paused, wait indefinitely until resume is called
+    if (this.paused) {
+      await new Promise<void>(resolve => {
+        this.pausePromise = { resolve };
+      });
+      // After resume, continue with the normal delay
+    }
+
+    if (this.delayMs > 0) {
+      await new Promise(resolve => setTimeout(resolve, this.delayMs));
+    }
+  }
+
+  private async emit(type: string, playerId: string | null, data: Record<string, unknown>): Promise<GameEvent> {
     const event: GameEvent = {
       id: uuidv4(),
       roomId: this.state.roomId,
@@ -49,6 +92,7 @@ export class GameEngine {
     for (const cb of this.eventCallbacks) {
       cb(event);
     }
+    await this.delay();
     return event;
   }
 
@@ -62,7 +106,7 @@ export class GameEngine {
 
   async runGame(): Promise<void> {
     this.state.gamePhase = 'playing';
-    this.emit('game:started', null, {
+    await this.emit('game:started', null, {
       players: this.state.players,
       board: this.state.board,
       currentPlayerIndex: this.state.currentPlayerIndex,
@@ -84,7 +128,7 @@ export class GameEngine {
     const player = this.getCurrentPlayer();
     if (player.isBankrupt) return;
 
-    this.emit('game:turn_start', player.id, {
+    await this.emit('game:turn_start', player.id, {
       playerName: player.name,
       turnNumber: this.state.turnNumber,
       inLobsterPot: player.inLobsterPot,
@@ -96,7 +140,7 @@ export class GameEngine {
       await this.handleNormalTurn(player);
     }
 
-    this.emit('game:turn_end', player.id, { playerName: player.name });
+    await this.emit('game:turn_end', player.id, { playerName: player.name });
   }
 
   private async handleNormalTurn(player: Player): Promise<void> {
@@ -107,7 +151,7 @@ export class GameEngine {
       const roll = rollDice();
       this.lastRoll = roll;
 
-      this.emit('game:dice_rolled', player.id, {
+      await this.emit('game:dice_rolled', player.id, {
         dice: roll.dice,
         total: roll.total,
         doubles: roll.doubles,
@@ -131,7 +175,7 @@ export class GameEngine {
       const passedSetSail = newPos < oldPos && newPos !== 0;
 
       player.position = newPos;
-      this.emit('game:player_moved', player.id, {
+      await this.emit('game:player_moved', player.id, {
         from: oldPos,
         to: newPos,
         squareName: this.state.board[newPos].name,
@@ -168,7 +212,7 @@ export class GameEngine {
 
     if (decision === 'pay' && player.money >= 50) {
       player.money -= 50;
-      this.emit('game:tax_paid', player.id, { amount: 50, reason: 'lobster_pot_fee' });
+      await this.emit('game:tax_paid', player.id, { amount: 50, reason: 'lobster_pot_fee' });
       this.freeFromLobsterPot(player, 'pay');
       await this.rollMoveAndAct(player);
       return;
@@ -177,7 +221,7 @@ export class GameEngine {
     // Roll for escape
     const roll = rollDice();
     this.lastRoll = roll;
-    this.emit('game:dice_rolled', player.id, {
+    await this.emit('game:dice_rolled', player.id, {
       dice: roll.dice,
       total: roll.total,
       doubles: roll.doubles,
@@ -188,7 +232,7 @@ export class GameEngine {
       const oldPos = player.position;
       const newPos = (player.position + roll.total) % 40;
       player.position = newPos;
-      this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
+      await this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
       if (newPos < oldPos) this.paySetSailBonus(player);
       await this.executeSquareAction(player, this.state.board[newPos], roll);
       if (!player.isBankrupt) await this.offerBuildingPhase(player);
@@ -202,7 +246,7 @@ export class GameEngine {
         const oldPos = player.position;
         const newPos = (player.position + roll.total) % 40;
         player.position = newPos;
-        this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
+        await this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
         if (newPos < oldPos) this.paySetSailBonus(player);
         await this.executeSquareAction(player, this.state.board[newPos], roll);
         if (!player.isBankrupt) await this.offerBuildingPhase(player);
@@ -214,7 +258,7 @@ export class GameEngine {
   private async rollMoveAndAct(player: Player): Promise<void> {
     const roll = rollDice();
     this.lastRoll = roll;
-    this.emit('game:dice_rolled', player.id, {
+    await this.emit('game:dice_rolled', player.id, {
       dice: roll.dice,
       total: roll.total,
       doubles: roll.doubles,
@@ -223,7 +267,7 @@ export class GameEngine {
     const oldPos = player.position;
     const newPos = (player.position + roll.total) % 40;
     player.position = newPos;
-    this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
+    await this.emit('game:player_moved', player.id, { from: oldPos, to: newPos, squareName: this.state.board[newPos].name });
     if (newPos < oldPos || (oldPos !== 0 && newPos === 0)) {
       this.paySetSailBonus(player);
     }
@@ -265,7 +309,7 @@ export class GameEngine {
       const rent = calculateRent(square, this.state.board, roll.total) * rentMultiplier;
       const owner = this.findPlayer(square.owner);
       if (owner && rent > 0) {
-        this.emit('game:rent_paid', player.id, {
+        await this.emit('game:rent_paid', player.id, {
           squareName: square.name,
           amount: rent,
           toPlayer: owner.name,
@@ -275,14 +319,14 @@ export class GameEngine {
     }
   }
 
-  private async handleCurrentLanding(player: Player, square: Square, roll: DiceRoll, rentMultiplier = 1): Promise<void> {
+  private async handleCurrentLanding(player: Player, square: Square, roll: DiceRoll, rentMultiplier =1): Promise<void> {
     if (!square.owner) {
       await this.offerBuy(player, square);
     } else if (square.owner !== player.id && !square.mortgaged) {
       const rent = calculateRent(square, this.state.board, roll.total) * rentMultiplier;
       const owner = this.findPlayer(square.owner);
       if (owner && rent > 0) {
-        this.emit('game:rent_paid', player.id, {
+        await this.emit('game:rent_paid', player.id, {
           squareName: square.name,
           amount: rent,
           toPlayer: owner.name,
@@ -312,7 +356,7 @@ export class GameEngine {
       }
       const owner = this.findPlayer(square.owner);
       if (owner && rent > 0) {
-        this.emit('game:rent_paid', player.id, {
+        await this.emit('game:rent_paid', player.id, {
           squareName: square.name,
           amount: rent,
           toPlayer: owner.name,
@@ -324,7 +368,7 @@ export class GameEngine {
 
   private async handleTaxSquare(player: Player, square: Square): Promise<void> {
     const amount = square.index === 4 ? 200 : 100; // Fishing Tax: 200, Pearl Tax: 100
-    this.emit('game:tax_paid', player.id, {
+    await this.emit('game:tax_paid', player.id, {
       squareName: square.name,
       amount,
     });
@@ -338,7 +382,7 @@ export class GameEngine {
     const card = deck.shift()!;
     deck.push(card); // Return to bottom
 
-    this.emit('game:card_drawn', player.id, {
+    await this.emit('game:card_drawn', player.id, {
       cardType: card.type,
       cardText: card.text,
       cardAction: card.action,
@@ -366,7 +410,7 @@ export class GameEngine {
       const oldPos = player.position;
       player.position = result.movedTo;
 
-      this.emit('game:player_moved', player.id, {
+      await this.emit('game:player_moved', player.id, {
         from: oldPos,
         to: result.movedTo,
         squareName: this.state.board[result.movedTo].name,
@@ -424,7 +468,7 @@ export class GameEngine {
           player.money += canPay;
           const result = resolveBankruptcy(other, amount - canPay, player.id, this.state);
           if (result.wentBankrupt) {
-            this.emit('game:bankrupt', other.id, { creditorId: player.id });
+            await this.emit('game:bankrupt', other.id, { creditorId: player.id });
           }
         }
       }
@@ -455,13 +499,13 @@ export class GameEngine {
     player.position = 10;
     player.inLobsterPot = true;
     player.lobsterPotTurns = 0;
-    this.emit('game:lobster_pot_in', player.id, { reason });
+    void this.emit('game:lobster_pot_in', player.id, { reason });
   }
 
   private freeFromLobsterPot(player: Player, method: string): void {
     player.inLobsterPot = false;
     player.lobsterPotTurns = 0;
-    this.emit('game:lobster_pot_out', player.id, { method });
+    void this.emit('game:lobster_pot_out', player.id, { method });
   }
 
   // --- Building Phase ---
@@ -485,14 +529,14 @@ export class GameEngine {
 
       if (decision.action === 'upgrade' && upgradeable.includes(decision.squareIndex)) {
         upgradeToFortress(decision.squareIndex, this.state.board, player);
-        this.emit('game:fortress_built', player.id, {
+        await this.emit('game:fortress_built', player.id, {
           squareIndex: decision.squareIndex,
           squareName: this.state.board[decision.squareIndex].name,
           cost: this.state.board[decision.squareIndex].fortressCost,
         });
       } else if (decision.action === 'build' && buildable.includes(decision.squareIndex)) {
         build(decision.squareIndex, this.state.board, player);
-        this.emit('game:outpost_built', player.id, {
+        await this.emit('game:outpost_built', player.id, {
           squareIndex: decision.squareIndex,
           squareName: this.state.board[decision.squareIndex].name,
           outposts: this.state.board[decision.squareIndex].outposts,
@@ -516,13 +560,13 @@ export class GameEngine {
       player.money -= square.price;
       square.owner = player.id;
       player.properties.push(square.index);
-      this.emit('game:property_bought', player.id, {
+      await this.emit('game:property_bought', player.id, {
         squareIndex: square.index,
         squareName: square.name,
         price: square.price,
       });
     } else {
-      this.emit('game:property_passed', player.id, {
+      await this.emit('game:property_passed', player.id, {
         squareIndex: square.index,
         squareName: square.name,
       });
@@ -542,7 +586,7 @@ export class GameEngine {
       const result = resolveBankruptcy(payer, amount, recipientId, this.state);
 
       if (result.wentBankrupt) {
-        this.emit('game:bankrupt', payer.id, {
+        await this.emit('game:bankrupt', payer.id, {
           debtAmount: amount,
           creditorId: recipientId,
         });
@@ -559,7 +603,7 @@ export class GameEngine {
 
   private paySetSailBonus(player: Player): void {
     player.money += 200;
-    this.emit('game:set_sail_bonus', player.id, { amount: 200, newBalance: player.money });
+    void this.emit('game:set_sail_bonus', player.id, { amount: 200, newBalance: player.money });
   }
 
   // --- Game End ---
@@ -613,7 +657,7 @@ export class GameEngine {
       }))
       .sort((a, b) => b.netWorth - a.netWorth);
 
-    this.emit('game:finished', winner.id, {
+    void this.emit('game:finished', winner.id, {
       winner,
       winnerName: winner.name,
       totalTurns: this.state.turnNumber,

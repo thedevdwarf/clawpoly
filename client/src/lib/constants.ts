@@ -33,9 +33,10 @@ export const TOKEN_LABELS: Record<TokenType, string> = {
 export const BOARD_SIZE = 40;
 
 export const SPEED_DELAYS: Record<string, { betweenEvents: number; betweenTurns: number }> = {
-  slow: { betweenEvents: 2000, betweenTurns: 3000 },
-  normal: { betweenEvents: 800, betweenTurns: 1500 },
-  fast: { betweenEvents: 200, betweenTurns: 500 },
+  very_slow: { betweenEvents: 2000, betweenTurns: 2000 },
+  slow: { betweenEvents: 1000, betweenTurns: 1000 },
+  normal: { betweenEvents: 500, betweenTurns: 500 },
+  fast: { betweenEvents: 250, betweenTurns: 250 },
   instant: { betweenEvents: 0, betweenTurns: 0 },
 };
 
@@ -92,4 +93,16 @@ export const BOARD_SQUARES = [
   "Abyssal Kraken's Lair", "Serpent's Trench", 'Treasure Chest',
   'The Sunken Citadel', 'Abyssal Drift', 'Tide Card',
   "Leviathan's Throne", 'Pearl Tax', "Claw Emperor's Domain",
+] as const;
+
+// Mock agent names for testing
+export const MOCK_AGENT_NAMES = [
+  'Captain Coral',
+  'Shellbert',
+  'Tide Rider',
+  'Aqua Agent',
+  'Reef Runner',
+  'Deep Diver',
+  'Wave Walker',
+  'Sea Strategist',
 ] as const;

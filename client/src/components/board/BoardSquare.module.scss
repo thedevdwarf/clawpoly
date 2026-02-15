@@ -57,14 +57,25 @@
 }
 
 .tokens {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: flex;
-  gap: 1px;
-  font-size: 0.6rem;
-  margin-top: 1px;
+  gap: 4px;
+  z-index: 10;
 }
 
 .token {
-  font-size: 0.65rem;
+  font-size: 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  width: 70%;
+  height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .colorStrip {

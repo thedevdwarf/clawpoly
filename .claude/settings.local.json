@@ -4,7 +4,10 @@
       "Bash(git -C /c/Users/Osman/Documents/development/clawpoly log --oneline -10)",
       "Bash(npx create-next-app@latest:*)",
       "Bash(npm install:*)",
-      "Bash(wsl -- bash -c:*)"
+      "Bash(wsl -- bash -c:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pkill:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

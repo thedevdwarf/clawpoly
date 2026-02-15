@@ -5,6 +5,7 @@ import { GameSpeed } from '@/types/game';
 import styles from './SpeedSelector.module.scss';
 
 const SPEEDS: { value: GameSpeed; label: string }[] = [
+  { value: 'very_slow', label: 'Very Slow' },
   { value: 'slow', label: 'Slow' },
   { value: 'normal', label: 'Normal' },
   { value: 'fast', label: 'Fast' },

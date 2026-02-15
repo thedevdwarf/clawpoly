@@ -2,7 +2,7 @@ import { Player } from './player';
 import { Square } from './square';
 
 export type GamePhase = 'waiting' | 'ready' | 'roll_order' | 'playing' | 'paused' | 'finished';
-export type GameSpeed = 'slow' | 'normal' | 'fast' | 'instant';
+export type GameSpeed = 'very_slow' | 'slow' | 'normal' | 'fast' | 'instant';
 
 export interface GameState {
   roomId: string;
