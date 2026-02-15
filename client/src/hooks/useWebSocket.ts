@@ -99,6 +99,9 @@ export function useWebSocket() {
       case 'game:resumed':
         s.setRoomStatus('playing');
         break;
+      case 'game:speed_changed':
+        if (msg.data.speed) s.setGameSpeed(msg.data.speed as string);
+        break;
       case 'game:started':
         s.setRoomStatus('playing');
         if (msg.data.players) s.setPlayers(msg.data.players as Player[]);
@@ -189,6 +192,13 @@ export function useWebSocket() {
     }
   }, []);
 
+  const setSpeed = useCallback((speed: string) => {
+    const ws = getWebSocket();
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: 'spectator:set_speed', data: { speed } }));
+    }
+  }, []);
+
   const disconnect = useCallback(() => {
     roomCodeRef.current = null;
     if (retryTimerRef.current) {
@@ -209,5 +219,5 @@ export function useWebSocket() {
     store.getState().setConnected(false);
   }, [store]);
 
-  return { connected, connect, disconnect, pause, resume };
+  return { connected, connect, disconnect, pause, resume, setSpeed };
 }

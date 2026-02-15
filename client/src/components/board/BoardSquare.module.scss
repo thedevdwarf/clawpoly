@@ -35,12 +35,21 @@
   color: $text-primary;
   word-break: break-word;
   padding: 1px;
+
+  @media (max-width: $breakpoint-md) {
+    font-size: 0.4rem;
+    line-height: 1;
+  }
 }
 
 .price {
   font-size: 0.55rem;
   color: $shell-gold;
   font-weight: 600;
+
+  @media (max-width: $breakpoint-md) {
+    font-size: 0.35rem;
+  }
 }
 
 .ownerDot {
@@ -48,12 +57,21 @@
   height: 6px;
   border-radius: 50%;
   display: inline-block;
+
+  @media (max-width: $breakpoint-md) {
+    width: 4px;
+    height: 4px;
+  }
 }
 
 .buildings {
   font-size: 0.5rem;
   line-height: 1;
   color: $text-secondary;
+
+  @media (max-width: $breakpoint-md) {
+    font-size: 0.35rem;
+  }
 }
 
 .tokens {
@@ -104,12 +122,23 @@
   line-height: 1;
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
   border: 1.5px solid rgba(255, 255, 255, 0.35);
+
+  @media (max-width: $breakpoint-md) {
+    width: 18px;
+    height: 18px;
+    font-size: 0.55rem;
+    border-width: 1px;
+  }
 }
 
 .colorStrip {
   position: absolute;
   width: 100%;
   height: 6px;
+
+  @media (max-width: $breakpoint-md) {
+    height: 4px;
+  }
 }
 
 .top .colorStrip {
@@ -126,6 +155,10 @@
   right: 0;
   width: 6px;
   height: 100%;
+
+  @media (max-width: $breakpoint-md) {
+    width: 4px;
+  }
 }
 
 .right .colorStrip {
@@ -133,6 +166,10 @@
   left: 0;
   width: 6px;
   height: 100%;
+
+  @media (max-width: $breakpoint-md) {
+    width: 4px;
+  }
 }
 
 .corner {

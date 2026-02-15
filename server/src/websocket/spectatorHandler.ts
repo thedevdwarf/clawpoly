@@ -3,7 +3,7 @@ import { getRedis } from '../redis';
 import { loadGameState, getEventLog } from '../state/redisState';
 import { WSMessage } from '../types/messages';
 import { GameEvent } from '../types/game';
-import { pauseGame, resumeGame } from '../room/roomManager';
+import { pauseGame, resumeGame, setGameSpeed } from '../room/roomManager';
 
 function sendMessage(ws: WebSocket, type: string, data: Record<string, unknown>): void {
   if (ws.readyState === WebSocket.OPEN) {
@@ -96,7 +96,19 @@ export async function handleSpectatorConnection(ws: WebSocket, roomCode: string)
             sendMessage(ws, 'error', { code: 'CANNOT_RESUME', message: 'Game is not paused or finished' });
           }
           break;
-        case 'spectator:set_speed':
+        case 'spectator:set_speed': {
+          const speed = msg.data?.speed as string;
+          if (!speed) {
+            sendMessage(ws, 'error', { code: 'INVALID_SPEED', message: 'speed is required' });
+            break;
+          }
+          if (await setGameSpeed(roomId, speed)) {
+            console.log(`[Spectator] Speed changed to ${speed} in room ${roomId}`);
+          } else {
+            sendMessage(ws, 'error', { code: 'CANNOT_SET_SPEED', message: 'Game not running' });
+          }
+          break;
+        }
         default:
           sendMessage(ws, 'error', { code: 'INVALID_ACTION', message: `Unknown command: ${msg.type}` });
       }

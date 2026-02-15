@@ -7,22 +7,24 @@ import styles from './GameLog.module.scss';
 
 export default function GameLog() {
   const events = useGameStore((s) => s.eventLog);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const entriesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = entriesRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [events.length]);
 
   return (
     <div className={styles.log}>
       <h3 className={styles.title}>Game Log</h3>
-      <div className={styles.entries}>
+      <div ref={entriesRef} className={styles.entries}>
         {events.length === 0 ? (
           <p className={styles.empty}>Waiting for events...</p>
         ) : (
           events.map((event) => <LogEntry key={event.id} event={event} />)
         )}
-        <div ref={bottomRef} />
       </div>
     </div>
   );

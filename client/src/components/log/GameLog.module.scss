@@ -9,6 +9,11 @@
   flex-direction: column;
   backdrop-filter: blur(12px);
   max-height: 100%;
+  overflow: hidden;
+
+  @media (max-width: $breakpoint-xl) {
+    max-height: 40vh;
+  }
 }
 
 .title {

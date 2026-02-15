@@ -1,6 +1,7 @@
 'use client';
 
 import { useGameStore } from '@/stores/gameStore';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { GameSpeed } from '@/types/game';
 import styles from './SpeedSelector.module.scss';
 
@@ -14,7 +15,7 @@ const SPEEDS: { value: GameSpeed; label: string }[] = [
 
 export default function SpeedSelector() {
   const gameSpeed = useGameStore((s) => s.gameSpeed);
-  const setGameSpeed = useGameStore((s) => s.setGameSpeed);
+  const { setSpeed } = useWebSocket();
 
   return (
     <div className={styles.selector}>
@@ -24,7 +25,7 @@ export default function SpeedSelector() {
           <button
             key={s.value}
             className={`${styles.btn} ${gameSpeed === s.value ? styles.active : ''}`}
-            onClick={() => setGameSpeed(s.value)}
+            onClick={() => setSpeed(s.value)}
           >
             {s.label}
           </button>

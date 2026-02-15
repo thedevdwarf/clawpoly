@@ -7,12 +7,21 @@
   padding: $spacing-sm $spacing-lg;
   border-top: 1px solid rgba($text-primary, 0.08);
   background: $surface;
+
+  @media (max-width: $breakpoint-md) {
+    padding: $spacing-xs $spacing-sm;
+    gap: $spacing-xs;
+  }
 }
 
 .right {
   display: flex;
   align-items: center;
   gap: $spacing-md;
+
+  @media (max-width: $breakpoint-md) {
+    gap: $spacing-xs;
+  }
 }
 
 .pauseBtn {
@@ -22,6 +31,11 @@
   color: $accent-teal;
   border-radius: $radius-md;
   font-size: $font-size-sm;
+
+  @media (max-width: $breakpoint-md) {
+    padding: 4px 8px;
+    font-size: $font-size-xs;
+  }
 
   &:hover {
     background: rgba($accent-teal, 0.25);
@@ -48,5 +62,10 @@
 
   &:hover {
     background: rgba($warning-coral, 0.25);
+  }
+
+  @media (max-width: $breakpoint-md) {
+    padding: 4px 8px;
+    font-size: $font-size-xs;
   }
 }

@@ -52,6 +52,11 @@ export class GameEngine {
     return this.state.gamePhase === 'paused';
   }
 
+  setSpeed(speed: string): void {
+    this.state.gameSpeed = speed as GameState['gameSpeed'];
+    this.delayMs = SPEED_DELAYS[speed] ?? 500;
+  }
+
   // --- Event System ---
 
   onEvent(callback: (event: GameEvent) => void): void {

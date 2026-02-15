@@ -63,6 +63,19 @@ export async function resumeGame(roomId: string): Promise<boolean> {
   return false;
 }
 
+export async function setGameSpeed(roomId: string, speed: string): Promise<boolean> {
+  const engine = gameEngines.get(roomId);
+  if (!engine) return false;
+  engine.setSpeed(speed);
+  const redis = getRedis();
+  await Promise.all([
+    saveGameState(roomId, engine.getState()),
+    redis.hset(`room:${roomId}`, 'gameSpeed', speed),
+  ]);
+  broadcastToSpectators(roomId, 'game:speed_changed', { speed });
+  return true;
+}
+
 interface RoomInfo {
   roomId: string;
   roomCode: string;

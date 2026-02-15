@@ -4,6 +4,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .gameHeader {
@@ -46,21 +47,38 @@
   @media (max-width: $breakpoint-xl) {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
+    padding: $spacing-sm;
+    gap: $spacing-sm;
   }
 }
 
 .sidebar {
   overflow-y: auto;
   max-height: calc(100vh - 180px);
+
+  @media (max-width: $breakpoint-xl) {
+    max-height: none;
+    order: 2;
+  }
 }
 
 .boardArea {
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  overflow: hidden;
+
+  @media (max-width: $breakpoint-xl) {
+    order: 0;
+  }
 }
 
 .logArea {
   overflow-y: auto;
   max-height: calc(100vh - 180px);
+
+  @media (max-width: $breakpoint-xl) {
+    max-height: 50vh;
+    order: 1;
+  }
 }

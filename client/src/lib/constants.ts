@@ -51,7 +51,7 @@ export const TOKEN_EMOJIS: Record<TokenType, string> = {
   lobster: '🦞',
   crab: '🦀',
   octopus: '🐙',
-  seahorse: '🐴',
+  seahorse: '🐡',
   dolphin: '🐬',
   shark: '🦈',
 };
