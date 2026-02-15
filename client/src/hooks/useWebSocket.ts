@@ -117,8 +117,18 @@ export function useWebSocket() {
 
   const connect = useCallback((roomCode: string) => {
     roomCodeRef.current = roomCode;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
     const ws = getWebSocket();
+    // Kill old socket cleanly — remove handlers first to prevent ghost reconnects
     if (ws.current) {
+      ws.current.onopen = null;
+      ws.current.onclose = null;
+      ws.current.onerror = null;
+      ws.current.onmessage = null;
       ws.current.close();
     }
 
@@ -126,15 +136,18 @@ export function useWebSocket() {
     setWebSocket(newWs);
     ws.current = newWs;
 
-    ws.current.onopen = () => {
+    newWs.onopen = () => {
       setConnected(true);
       store.getState().setConnected(true);
       retryRef.current = 0;
     };
 
-    ws.current.onmessage = handleMessage;
+    newWs.onmessage = handleMessage;
 
-    ws.current.onclose = () => {
+    newWs.onclose = () => {
+      // Only handle if this is still the active socket
+      if (getWebSocket().current !== newWs) return;
+
       setConnected(false);
       store.getState().setConnected(false);
       // Auto-reconnect with exponential backoff
@@ -147,8 +160,8 @@ export function useWebSocket() {
       }
     };
 
-    ws.current.onerror = () => {
-      ws.current?.close();
+    newWs.onerror = () => {
+      newWs.close();
     };
   }, [handleMessage, store]);
 
@@ -178,9 +191,16 @@ export function useWebSocket() {
 
   const disconnect = useCallback(() => {
     roomCodeRef.current = null;
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     const ws = getWebSocket();
     if (ws.current) {
+      ws.current.onopen = null;
+      ws.current.onclose = null;
+      ws.current.onerror = null;
+      ws.current.onmessage = null;
       ws.current.close();
       ws.current = null;
       setWebSocket(null);

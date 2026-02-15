@@ -31,20 +31,32 @@ export function getRegisteredAgents(roomId: string): Map<string, AgentDecision> 
   return registeredAgents.get(roomId) || new Map();
 }
 
-export function pauseGame(roomId: string): boolean {
+export async function pauseGame(roomId: string): Promise<boolean> {
   const engine = gameEngines.get(roomId);
   if (engine && !engine.isPaused()) {
     engine.pause();
+    // Persist paused state to both Redis keys
+    const redis = getRedis();
+    await Promise.all([
+      saveGameState(roomId, engine.getState()),
+      redis.hset(`room:${roomId}`, 'gamePhase', 'paused'),
+    ]);
     broadcastToSpectators(roomId, 'game:paused', { paused: true });
     return true;
   }
   return false;
 }
 
-export function resumeGame(roomId: string): boolean {
+export async function resumeGame(roomId: string): Promise<boolean> {
   const engine = gameEngines.get(roomId);
   if (engine && engine.isPaused()) {
     engine.resume();
+    // Persist resumed state to both Redis keys
+    const redis = getRedis();
+    await Promise.all([
+      saveGameState(roomId, engine.getState()),
+      redis.hset(`room:${roomId}`, 'gamePhase', 'playing'),
+    ]);
     broadcastToSpectators(roomId, 'game:resumed', { paused: false });
     return true;
   }
@@ -229,9 +241,9 @@ class RoomManager {
       // Broadcast to spectators
       broadcastEvent(roomId, event);
 
-      // Periodically save state for late-joining spectators
+      // Periodically save state for late-joining spectators (skip if paused to avoid overwriting)
       eventCount++;
-      if (eventCount % STATE_SAVE_INTERVAL === 0) {
+      if (eventCount % STATE_SAVE_INTERVAL === 0 && !engine.isPaused()) {
         try {
           await saveGameState(roomId, engine.getState());
         } catch (err) {

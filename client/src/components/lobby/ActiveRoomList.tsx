@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { listRooms } from '@/lib/api';
+import { listRooms, deleteAllRooms } from '@/lib/api';
 import { RoomResponse } from '@/types/api';
 import styles from './Lobby.module.scss';
 
@@ -10,26 +10,38 @@ export default function ActiveRoomList() {
   const [rooms, setRooms] = useState<RoomResponse[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let mounted = true;
-    const fetch = async () => {
-      try {
-        const data = await listRooms();
-        if (mounted) setRooms(data.rooms);
-      } catch {
-        // silently fail
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    fetch();
-    const interval = setInterval(fetch, 10000);
-    return () => { mounted = false; clearInterval(interval); };
+  const fetchRooms = useCallback(async () => {
+    try {
+      const data = await listRooms();
+      setRooms(data.rooms);
+    } catch {
+      // silently fail
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchRooms();
+    const interval = setInterval(fetchRooms, 10000);
+    return () => { clearInterval(interval); };
+  }, [fetchRooms]);
+
+  const handleClearAll = async () => {
+    await deleteAllRooms();
+    await fetchRooms();
+  };
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.cardTitle}>Active Rooms</h2>
+      <div className={styles.cardHeader}>
+        <h2 className={styles.cardTitle}>Active Rooms</h2>
+        {rooms.length > 0 && (
+          <button className={styles.btnDanger} onClick={handleClearAll}>
+            Clear All
+          </button>
+        )}
+      </div>
       {loading ? (
         <p className={styles.hint}>Loading rooms...</p>
       ) : rooms.length === 0 ? (

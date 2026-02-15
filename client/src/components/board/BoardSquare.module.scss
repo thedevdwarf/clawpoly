@@ -58,24 +58,52 @@
 
 .tokens {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   display: flex;
-  gap: 4px;
+  gap: 2px;
   z-index: 10;
+
+  // Default (top row): bottom
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottom .tokens {
+  bottom: auto;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.right .tokens {
+  bottom: auto;
+  top: 50%;
+  left: 2px;
+  transform: translateY(-50%);
+  flex-direction: column;
+}
+
+.left .tokens {
+  bottom: auto;
+  top: 50%;
+  left: auto;
+  right: 2px;
+  transform: translateY(-50%);
+  flex-direction: column;
 }
 
 .token {
-  font-size: 1.5rem;
-  background: rgba(0, 0, 0, 0.3);
+  font-size: 1.1rem;
+  background: rgba(0, 0, 0, 0.55);
   border-radius: 50%;
-  width: 70%;
-  height: 70%;
+  width: 33px;
+  height: 33px;
   display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
 }
 
 .colorStrip {

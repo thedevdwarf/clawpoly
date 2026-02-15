@@ -9,7 +9,7 @@ export interface RoomResponse {
 }
 
 export interface GameResponse {
-  id: string;
+  _id: string;
   roomCode: string;
   name: string;
   winnerId: string;

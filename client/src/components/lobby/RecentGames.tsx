@@ -30,7 +30,7 @@ export default function RecentGames() {
           {games.map((g) => {
             const winner = g.players?.find((p) => p.placement === 1);
             return (
-              <div key={g.id} className={styles.roomItem}>
+              <div key={g._id} className={styles.roomItem}>
                 <span className={styles.roomItemName}>{g.name || g.roomCode}</span>
                 <span className={styles.hint}>
                   {winner ? `${winner.name} won` : 'Finished'} · {g.totalTurns}t

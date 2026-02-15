@@ -78,19 +78,19 @@ export async function handleSpectatorConnection(ws: WebSocket, roomCode: string)
   }
 
   // Handle spectator commands
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     try {
       const msg = JSON.parse(raw.toString()) as WSMessage;
       switch (msg.type) {
         case 'spectator:pause':
-          if (pauseGame(roomId)) {
+          if (await pauseGame(roomId)) {
             console.log(`[Spectator] Game paused in room ${roomId}`);
           } else {
             sendMessage(ws, 'error', { code: 'CANNOT_PAUSE', message: 'Game is already paused or finished' });
           }
           break;
         case 'spectator:resume':
-          if (resumeGame(roomId)) {
+          if (await resumeGame(roomId)) {
             console.log(`[Spectator] Game resumed in room ${roomId}`);
           } else {
             sendMessage(ws, 'error', { code: 'CANNOT_RESUME', message: 'Game is not paused or finished' });

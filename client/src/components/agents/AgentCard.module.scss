@@ -43,18 +43,50 @@
   font-size: $font-size-sm;
 }
 
-.properties {
+.propertyList {
   display: flex;
-  gap: 3px;
+  flex-direction: column;
+  gap: 1px;
   margin-top: $spacing-xs;
-  flex-wrap: wrap;
 }
 
-.colorDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  display: inline-block;
+.propertyItem {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  line-height: 1.3;
+
+  &.mortgaged {
+    opacity: 0.4;
+  }
+}
+
+.propertyIcon {
+  font-size: 0.55rem;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+
+.propertyName {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.propertyBuilding {
+  font-size: 0.6rem;
+  flex-shrink: 0;
+}
+
+.propertyMortgaged {
+  font-size: 0.55rem;
+  color: $warning-coral;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .stats {

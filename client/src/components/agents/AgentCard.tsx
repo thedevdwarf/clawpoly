@@ -11,15 +11,22 @@ interface AgentCardProps {
   isActive: boolean;
 }
 
+function buildingLabel(sq: { outposts: number; fortress: boolean }): string | null {
+  if (sq.fortress) return '🏰';
+  if (sq.outposts > 0) return `🏗️×${sq.outposts}`;
+  return null;
+}
+
+function squareIcon(type: string): string {
+  if (type === 'current') return '🌊';
+  if (type === 'utility') return '⚡';
+  return '■';
+}
+
 export default function AgentCard({ player, isActive }: AgentCardProps) {
   const board = useGameStore((s) => s.board);
 
   const ownedSquares = board.filter((sq) => sq.owner === player.id);
-  const outpostCount = ownedSquares.reduce((sum, sq) => sum + sq.outposts, 0);
-  const fortressCount = ownedSquares.filter((sq) => sq.fortress).length;
-
-  // Get unique color groups owned
-  const colorGroups = [...new Set(ownedSquares.map((sq) => sq.colorGroup).filter(Boolean))];
 
   return (
     <div
@@ -36,22 +43,30 @@ export default function AgentCard({ player, isActive }: AgentCardProps) {
         <span className={styles.balance}>{formatShells(player.money)}</span>
       </div>
 
-      {colorGroups.length > 0 && (
-        <div className={styles.properties}>
-          {colorGroups.map((cg) => (
-            <span
-              key={cg}
-              className={styles.colorDot}
-              style={{ backgroundColor: COLOR_GROUP_COLORS[cg!] }}
-              title={cg!}
-            />
+      {ownedSquares.length > 0 && (
+        <div className={styles.propertyList}>
+          {ownedSquares.map((sq) => (
+            <div
+              key={sq.index}
+              className={classNames(styles.propertyItem, sq.mortgaged && styles.mortgaged)}
+            >
+              <span
+                className={styles.propertyIcon}
+                style={sq.colorGroup ? { color: COLOR_GROUP_COLORS[sq.colorGroup] } : undefined}
+              >
+                {squareIcon(sq.type)}
+              </span>
+              <span className={styles.propertyName}>{sq.name}</span>
+              {buildingLabel(sq) && (
+                <span className={styles.propertyBuilding}>{buildingLabel(sq)}</span>
+              )}
+              {sq.mortgaged && <span className={styles.propertyMortgaged}>M</span>}
+            </div>
           ))}
         </div>
       )}
 
       <div className={styles.stats}>
-        {outpostCount > 0 && <span>Outposts: {outpostCount}</span>}
-        {fortressCount > 0 && <span>Fortress: {fortressCount}</span>}
         {player.escapeCards > 0 && <span>Escape: {player.escapeCards}</span>}
       </div>
 

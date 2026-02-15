@@ -25,7 +25,6 @@ export class GameEngine {
   private consecutiveDoubles = 0;
   private lastRoll: DiceRoll | null = null;
   private delayMs: number;
-  private paused = false;
   private pausePromise: { resolve: () => void } | null = null;
 
   constructor(state: GameState, agents: Map<string, AgentDecision>) {
@@ -37,12 +36,10 @@ export class GameEngine {
   // --- Pause/Resume ---
 
   pause(): void {
-    this.paused = true;
     this.state.gamePhase = 'paused';
   }
 
   resume(): void {
-    this.paused = false;
     this.state.gamePhase = 'playing';
 
     if (this.pausePromise) {
@@ -52,7 +49,7 @@ export class GameEngine {
   }
 
   isPaused(): boolean {
-    return this.paused;
+    return this.state.gamePhase === 'paused';
   }
 
   // --- Event System ---
@@ -63,7 +60,7 @@ export class GameEngine {
 
   private async delay(): Promise<void> {
     // If paused, wait indefinitely until resume is called
-    if (this.paused) {
+    if (this.isPaused()) {
       await new Promise<void>(resolve => {
         this.pausePromise = { resolve };
       });

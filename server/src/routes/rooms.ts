@@ -45,6 +45,20 @@ router.get('/', async (_req, res) => {
   }
 });
 
+router.delete('/', async (_req, res) => {
+  try {
+    const rooms = await roomManager.listRooms();
+    let deleted = 0;
+    for (const room of rooms) {
+      await roomManager.deleteRoom(room.roomId);
+      deleted++;
+    }
+    res.json({ status: 'deleted', count: deleted });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:roomId', async (req, res) => {
   try {
     const room = await roomManager.getRoom(req.params.roomId);

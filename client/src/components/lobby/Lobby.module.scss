@@ -8,10 +8,36 @@
   backdrop-filter: blur(12px);
 }
 
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
 .cardTitle {
   font-size: $font-size-xl;
-  margin-bottom: $spacing-md;
   color: $text-primary;
+
+  .cardHeader > & {
+    margin-bottom: 0;
+  }
+}
+
+.btnDanger {
+  padding: $spacing-xs $spacing-md;
+  background: rgba($warning-coral, 0.15);
+  border: 1px solid $warning-coral;
+  color: $warning-coral;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba($warning-coral, 0.3);
+  }
 }
 
 .joinRow {
