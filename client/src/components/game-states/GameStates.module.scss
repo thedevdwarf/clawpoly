@@ -101,6 +101,27 @@
   }
 }
 
+.deleteButton {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba($warning-coral, 0.4);
+  background: rgba($warning-coral, 0.15);
+  color: $warning-coral;
+
+  &:hover:not(:disabled) {
+    background: rgba($warning-coral, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
 .dots {
   display: flex;
   justify-content: center;

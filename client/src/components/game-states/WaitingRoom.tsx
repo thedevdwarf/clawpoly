@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { TOKEN_EMOJIS, MOCK_AGENT_NAMES } from '@/lib/constants';
 import { TokenType } from '@/types/player';
-import { joinRoom, startGame } from '@/lib/api';
+import { joinRoom, startGame, deleteRoom } from '@/lib/api';
 import styles from './GameStates.module.scss';
 
 interface WaitingRoomProps {
@@ -17,6 +17,7 @@ export default function WaitingRoom({ roomCode }: WaitingRoomProps) {
   const roomStatus = useGameStore((s) => s.roomStatus);
   const [addingAgent, setAddingAgent] = useState(false);
   const [startingGame, setStartingGame] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleAddAgent = async () => {
     if (!roomId || addingAgent) return;
@@ -46,6 +47,21 @@ export default function WaitingRoom({ roomCode }: WaitingRoomProps) {
       alert(err.message);
     } finally {
       setStartingGame(false);
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!roomId || deleting) return;
+    if (!confirm('Delete this room? This cannot be undone.')) return;
+    setDeleting(true);
+    try {
+      await deleteRoom(roomId);
+      window.location.href = '/';
+    } catch (err: any) {
+      console.error('Failed to delete room:', err.message);
+      alert(err.message);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -84,6 +100,13 @@ export default function WaitingRoom({ roomCode }: WaitingRoomProps) {
               disabled={!canStart || startingGame}
             >
               {startingGame ? 'Starting...' : 'Start Game'}
+            </button>
+            <button
+              className={styles.deleteButton}
+              onClick={handleDeleteRoom}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete Room'}
             </button>
           </div>
         )}

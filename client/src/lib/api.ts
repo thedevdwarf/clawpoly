@@ -40,6 +40,10 @@ export async function startGame(roomId: string) {
   return request<{ status: string }>(`/rooms/${roomId}/start`, { method: 'POST' });
 }
 
+export async function deleteRoom(roomId: string) {
+  return request<{ status: string }>(`/rooms/${roomId}`, { method: 'DELETE' });
+}
+
 export async function listGames(page = 1, limit = 20) {
   return request<{ games: GameResponse[]; total: number; page: number; limit: number; pages: number }>(`/games?page=${page}&limit=${limit}`);
 }

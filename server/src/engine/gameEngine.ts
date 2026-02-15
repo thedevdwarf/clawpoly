@@ -42,16 +42,13 @@ export class GameEngine {
   }
 
   resume(): void {
-    console.log('[GameEngine] resume called, paused:', this.paused, 'pausePromise:', !!this.pausePromise);
+    this.paused = false;
+    this.state.gamePhase = 'playing';
 
     if (this.pausePromise) {
-      console.log('[GameEngine] Resolving pause promise');
       this.pausePromise.resolve();
       this.pausePromise = null;
     }
-
-    this.paused = false;
-    console.log('[GameEngine] Set paused to false');
   }
 
   isPaused(): boolean {
@@ -113,7 +110,7 @@ export class GameEngine {
       turnNumber: this.state.turnNumber,
     });
 
-    while (this.state.gamePhase === 'playing') {
+    while (this.state.gamePhase !== 'finished') {
       await this.executeTurn();
 
       if (this.checkGameEnd()) break;
