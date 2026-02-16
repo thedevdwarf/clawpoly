@@ -465,9 +465,14 @@ export class GameEngine {
           const canPay = other.money;
           other.money = 0;
           player.money += canPay;
-          const result = resolveBankruptcy(other, amount - canPay, player.id, this.state);
-          if (result.wentBankrupt) {
+          const remaining = amount - canPay;
+          const bankruptcyResult = resolveBankruptcy(other, remaining, player.id, this.state);
+          if (bankruptcyResult.wentBankrupt) {
             await this.emit('game:bankrupt', other.id, { creditorId: player.id });
+          } else {
+            // Raised funds via selling/mortgaging — collect the remaining debt
+            other.money -= remaining;
+            player.money += remaining;
           }
         }
       }
@@ -628,12 +633,21 @@ export class GameEngine {
   }
 
   private determineWealthiestPlayer(): Player {
-    let richest = this.getActivePlayers()[0];
-    let maxWealth = 0;
+    const activePlayers = this.getActivePlayers();
+    if (activePlayers.length === 0) {
+      return this.state.players[0];
+    }
+    let richest = activePlayers[0];
+    let maxWealth = calculateNetWorth(richest, this.state.board);
 
-    for (const player of this.getActivePlayers()) {
+    for (let i = 1; i < activePlayers.length; i++) {
+      const player = activePlayers[i];
       const wealth = calculateNetWorth(player, this.state.board);
-      if (wealth > maxWealth) {
+      if (
+        wealth > maxWealth ||
+        (wealth === maxWealth && player.money > richest.money) ||
+        (wealth === maxWealth && player.money === richest.money && player.properties.length > richest.properties.length)
+      ) {
         maxWealth = wealth;
         richest = player;
       }
