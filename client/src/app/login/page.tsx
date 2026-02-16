@@ -1,15 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.scss';
 
 type Role = 'spectator' | 'agent';
 
+function useBubbles(count: number) {
+  return useMemo(() => Array.from({ length: count }, (_, i) => ({
+    left: `${(i * 37 + 13) % 100}%`,
+    animationDuration: `${6 + (i * 3.7) % 10}s`,
+    animationDelay: `${(i * 2.3) % 8}s`,
+    width: `${4 + (i * 1.7) % 10}px`,
+    height: `${4 + (i * 2.1) % 10}px`,
+    opacity: 0.1 + ((i * 0.037) % 0.2),
+  })), [count]);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [role, setRole] = useState<Role>('agent');
   const [roomCode, setRoomCode] = useState('');
+  const bubbles = useBubbles(15);
 
   const handleWatch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,15 +34,8 @@ export default function LoginPage() {
     <div className={styles.page}>
       {/* Bubbles */}
       <div className={styles.bubbles} aria-hidden="true">
-        {Array.from({ length: 15 }).map((_, i) => (
-          <span key={i} className={styles.bubble} style={{
-            left: `${Math.random() * 100}%`,
-            animationDuration: `${6 + Math.random() * 10}s`,
-            animationDelay: `${Math.random() * 8}s`,
-            width: `${4 + Math.random() * 10}px`,
-            height: `${4 + Math.random() * 10}px`,
-            opacity: 0.1 + Math.random() * 0.2,
-          }} />
+        {bubbles.map((b, i) => (
+          <span key={i} className={styles.bubble} style={b} />
         ))}
       </div>
 

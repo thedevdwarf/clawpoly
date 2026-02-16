@@ -1,8 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { submitWishlist, getWishlistCount } from '@/lib/api';
 import styles from './page.module.scss';
+
+function useBubbles(count: number) {
+  return useMemo(() => Array.from({ length: count }, (_, i) => ({
+    left: `${(i * 37 + 13) % 100}%`,
+    animationDuration: `${6 + (i * 3.7) % 10}s`,
+    animationDelay: `${(i * 2.3) % 8}s`,
+    width: `${4 + (i * 1.9) % 12}px`,
+    height: `${4 + (i * 2.3) % 12}px`,
+    opacity: 0.15 + ((i * 0.041) % 0.25),
+  })), [count]);
+}
 
 function useOnScreen(ref: React.RefObject<HTMLElement | null>) {
   const [visible, setVisible] = useState(false);
@@ -36,6 +47,7 @@ export default function LandingPage() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'duplicate' | 'error'>('idle');
   const [message, setMessage] = useState('');
   const [count, setCount] = useState<number | null>(null);
+  const bubbles = useBubbles(20);
 
   useEffect(() => {
     getWishlistCount().then((d) => setCount(d.count)).catch(() => {});
@@ -66,15 +78,8 @@ export default function LandingPage() {
     <div className={styles.landing}>
       {/* Animated bubbles background */}
       <div className={styles.bubbles} aria-hidden="true">
-        {Array.from({ length: 20 }).map((_, i) => (
-          <span key={i} className={styles.bubble} style={{
-            left: `${Math.random() * 100}%`,
-            animationDuration: `${6 + Math.random() * 10}s`,
-            animationDelay: `${Math.random() * 8}s`,
-            width: `${4 + Math.random() * 12}px`,
-            height: `${4 + Math.random() * 12}px`,
-            opacity: 0.15 + Math.random() * 0.25,
-          }} />
+        {bubbles.map((b, i) => (
+          <span key={i} className={styles.bubble} style={b} />
         ))}
       </div>
 
