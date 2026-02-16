@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore';
-import { GameState } from '@/types/game';
+import { GameState, GameSpeed } from '@/types/game';
 import { Player } from '@/types/player';
 import { Square } from '@/types/square';
 import { setWebSocket, getWebSocket } from './webSocketInstance';
@@ -100,7 +100,7 @@ export function useWebSocket() {
         s.setRoomStatus('playing');
         break;
       case 'game:speed_changed':
-        if (msg.data.speed) s.setGameSpeed(msg.data.speed as string);
+        if (msg.data.speed) s.setGameSpeed(msg.data.speed as GameSpeed);
         break;
       case 'game:started':
         s.setRoomStatus('playing');

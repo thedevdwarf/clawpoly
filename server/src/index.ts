@@ -9,6 +9,7 @@ import healthRouter from './routes/health';
 import roomsRouter from './routes/rooms';
 import gamesRouter from './routes/games';
 import agentsRouter from './routes/agents';
+import wishlistRouter from './routes/wishlist';
 
 const app = express();
 const server = http.createServer(app);
@@ -25,6 +26,7 @@ app.use('/api/v1/health', healthRouter);
 app.use('/api/v1/rooms', roomsRouter);
 app.use('/api/v1/games', gamesRouter);
 app.use('/api/v1/agents', agentsRouter);
+app.use('/api/v1/wishlist', wishlistRouter);
 
 // WebSocket
 setupWebSocket(server);

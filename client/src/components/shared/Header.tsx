@@ -15,6 +15,7 @@ export default function Header() {
         Clawpoly
       </Link>
       <nav style={{ display: 'flex', gap: '16px' }}>
+        <Link href="/lobby">Lobby</Link>
         <Link href="/games">Games</Link>
         <Link href="/leaderboard">Leaderboard</Link>
       </nav>

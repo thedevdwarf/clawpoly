@@ -1,0 +1,254 @@
+@use '@/styles/variables' as *;
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl $spacing-md;
+  overflow: hidden;
+}
+
+// Bubbles
+.bubbles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -20px;
+  background: rgba($accent-teal, 0.4);
+  border-radius: 50%;
+  animation: bubbleRise linear infinite;
+}
+
+@keyframes bubbleRise {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) scale(0.4); opacity: 0; }
+}
+
+// Main card
+.card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+
+// Mascot
+.mascot {
+  font-size: 5rem;
+  margin-bottom: $spacing-md;
+  animation: mascotBob 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px rgba($accent-teal, 0.3));
+}
+
+@keyframes mascotBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-3deg); }
+  75% { transform: translateY(-4px) rotate(3deg); }
+}
+
+// Title
+.title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: $text-primary;
+  margin-bottom: $spacing-sm;
+
+  @media (max-width: $breakpoint-md) {
+    font-size: 1.6rem;
+  }
+}
+
+.titleAccent {
+  color: $accent-teal;
+  text-shadow: 0 0 20px rgba($accent-teal, 0.4);
+}
+
+.subtitle {
+  font-size: $font-size-md;
+  color: $text-secondary;
+  margin-bottom: $spacing-xl;
+  line-height: 1.5;
+}
+
+.subtitleHighlight {
+  color: $text-primary;
+  text-decoration: underline;
+  text-decoration-color: rgba($accent-teal, 0.4);
+  text-underline-offset: 3px;
+}
+
+// Role toggle
+.toggle {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-xl;
+  justify-content: center;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-lg;
+  font-size: $font-size-md;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid rgba($text-primary, 0.12);
+  background: transparent;
+  color: $text-secondary;
+
+  &:hover:not(.active) {
+    border-color: rgba($text-primary, 0.25);
+    color: $text-primary;
+  }
+
+  &.active {
+    background: $accent-teal;
+    border-color: $accent-teal;
+    color: $bg-deep-ocean;
+  }
+}
+
+.toggleIcon {
+  font-size: 1.1rem;
+}
+
+// Content card
+.content {
+  background: rgba($surface, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba($accent-teal, 0.15);
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  margin-bottom: $spacing-xl;
+}
+
+.contentTitle {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $text-primary;
+  margin-bottom: $spacing-lg;
+}
+
+// Skill box
+.skillBox {
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($accent-teal, 0.25);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.skillCode {
+  font-family: 'Courier New', monospace;
+  font-size: $font-size-sm;
+  color: $accent-teal;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+// Steps
+.steps {
+  text-align: left;
+
+  p {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    line-height: 1.9;
+  }
+}
+
+.stepNum {
+  color: $accent-teal;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+// Form
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.input {
+  padding: $spacing-md;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-primary;
+  font-size: $font-size-md;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: center;
+  letter-spacing: 1px;
+
+  &:focus {
+    border-color: $accent-teal;
+  }
+
+  &::placeholder {
+    color: $text-secondary;
+    letter-spacing: 0;
+  }
+}
+
+.submitBtn {
+  padding: $spacing-md;
+  background: $accent-teal;
+  color: $bg-deep-ocean;
+  font-size: $font-size-md;
+  font-weight: 700;
+  border-radius: $radius-md;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// Bottom
+.bottom {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+}
+
+.bottomIcon {
+  font-size: 1.2rem;
+}
+
+.bottomLink {
+  color: $accent-teal;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

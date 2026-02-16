@@ -59,3 +59,14 @@ export async function getGame(gameId: string) {
 export async function getLeaderboard() {
   return request<{ leaderboard: LeaderboardEntry[] }>('/agents/leaderboard');
 }
+
+export async function submitWishlist(email: string) {
+  return request<{ status: string; count: number }>('/wishlist', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function getWishlistCount() {
+  return request<{ count: number }>('/wishlist/count');
+}
