@@ -1,11 +1,14 @@
-import { createInitialGameState } from './state/gameState';
+import { GameState } from './types/game';
+import { Player, TOKEN_COLORS, TokenType } from './types/player';
+import { AgentDecision } from './types/agent';
 import { GameEngine } from './engine/gameEngine';
 import { RandomAgent } from './engine/agents/randomAgent';
 import { determineTurnOrder } from './engine/turnOrder';
-import { Player, TOKEN_COLORS, TokenType } from './types/player';
-import { AgentDecision } from './types/agent';
+import { createBoard } from './engine/board';
+import { createTideCards, createTreasureChestCards } from './engine/cards';
+import { calculateNetWorth } from './engine/bankruptcy';
 
-// Create 4 players
+// --- Create 4 players ---
 const tokens: TokenType[] = ['lobster', 'crab', 'octopus', 'seahorse'];
 const players: Player[] = tokens.map((token, i) => ({
   id: `player-${i + 1}`,
@@ -23,33 +26,50 @@ const players: Player[] = tokens.map((token, i) => ({
   consecutiveTimeouts: 0,
 }));
 
-// Create game state
-const state = createInitialGameState('test-room', 'TEST01', 'Test Game', {
-  turnLimit: 200,
+// --- Build game state directly (no Redis/MongoDB) ---
+const board = createBoard();
+const tideCards = createTideCards();
+const treasureChestCards = createTreasureChestCards();
+
+const state: GameState = {
+  roomId: 'test-room',
+  roomCode: 'TEST01',
+  roomName: 'E2E Engine Test',
+  players: [...players],
+  board,
+  currentPlayerIndex: 0,
+  turnNumber: 0,
+  tideCards,
+  treasureChestCards,
+  gamePhase: 'waiting',
   gameSpeed: 'instant',
-});
-state.players = players;
+  winner: null,
+  turnLimit: 100,
+};
 
-// Determine turn order
+// --- Determine turn order ---
 const orderResult = determineTurnOrder(players.map((p) => p.id));
-console.log('Turn order:', orderResult.order.map((id) => {
+console.log('Turn order:');
+orderResult.order.forEach((id, i) => {
   const p = players.find((pl) => pl.id === id)!;
-  return `${p.name} (rolled ${orderResult.rolls[id]})`;
-}));
-
-// Reorder players
+  console.log(`  ${i + 1}. ${p.name} (rolled ${orderResult.rolls[id]})`);
+});
 state.players = orderResult.order.map((id) => players.find((p) => p.id === id)!);
 
-// Create agents
+// --- Create agents ---
 const agents = new Map<string, AgentDecision>();
 for (const player of state.players) {
   agents.set(player.id, new RandomAgent());
 }
 
-// Create engine with event logging
+// --- Event logging ---
 const engine = new GameEngine(state, agents);
 
 let eventCount = 0;
+let purchaseCount = 0;
+let rentCount = 0;
+let bankruptCount = 0;
+
 engine.onEvent((event) => {
   eventCount++;
   const prefix = `[Turn ${event.turnNumber}]`;
@@ -65,9 +85,11 @@ engine.onEvent((event) => {
       console.log(`${prefix}   Moved to ${event.data.squareName} (${event.data.from}->${event.data.to})`);
       break;
     case 'game:property_bought':
+      purchaseCount++;
       console.log(`${prefix}   BOUGHT ${event.data.squareName} for $${event.data.price}`);
       break;
     case 'game:rent_paid':
+      rentCount++;
       console.log(`${prefix}   PAID $${event.data.amount} rent to ${event.data.toPlayer} for ${event.data.squareName}`);
       break;
     case 'game:tax_paid':
@@ -92,28 +114,56 @@ engine.onEvent((event) => {
       console.log(`${prefix}   ESCAPED Lobster Pot (${event.data.method})`);
       break;
     case 'game:bankrupt':
+      bankruptCount++;
       console.log(`${prefix}   BANKRUPT! Debt: $${event.data.debtAmount}`);
       break;
-    case 'game:finished': {
-      console.log(`\n========================================`);
-      console.log(`GAME OVER! Winner: ${event.data.winnerName}`);
-      console.log(`Total turns: ${event.data.totalTurns}`);
-      console.log(`Total events: ${eventCount}`);
-      console.log(`\nFinal Standings:`);
-      const standings = event.data.standings as Array<{name: string; netWorth: number; isBankrupt: boolean}>;
-      standings.forEach((s, i) => {
-        console.log(`  ${i + 1}. ${s.name} — Net Worth: $${s.netWorth}${s.isBankrupt ? ' (BANKRUPT)' : ''}`);
-      });
-      console.log(`========================================`);
+    case 'game:finished':
+      // Handled after runGame completes
       break;
-    }
   }
 });
 
-// Run the game!
-console.log('Starting Clawpoly simulation with 4 RandomAgents...\n');
+// --- Run the game ---
+console.log('\nStarting Clawpoly E2E simulation with 4 RandomAgents (turnLimit=100)...\n');
+
 engine.runGame().then(() => {
+  const finalState = engine.getState();
+
+  console.log('\n========================================');
+  console.log('GAME OVER!');
+  console.log('========================================');
+
+  if (finalState.winner) {
+    console.log(`Winner: ${finalState.winner.name}`);
+  }
+
+  console.log(`Total turns: ${finalState.turnNumber}`);
+  console.log(`Total events: ${eventCount}`);
+  console.log(`Purchases: ${purchaseCount} | Rent payments: ${rentCount} | Bankruptcies: ${bankruptCount}`);
+
+  console.log('\nFinal Standings:');
+  console.log('─'.repeat(60));
+
+  const standings = finalState.players
+    .map((p) => ({
+      name: p.name,
+      money: p.money,
+      netWorth: calculateNetWorth(p, finalState.board),
+      properties: p.properties.length,
+      isBankrupt: p.isBankrupt,
+    }))
+    .sort((a, b) => b.netWorth - a.netWorth);
+
+  standings.forEach((s, i) => {
+    const status = s.isBankrupt ? ' (BANKRUPT)' : '';
+    console.log(
+      `  ${i + 1}. ${s.name} — Cash: $${s.money} | Net Worth: $${s.netWorth} | Properties: ${s.properties}${status}`
+    );
+  });
+
+  console.log('─'.repeat(60));
   console.log('\nSimulation complete!');
 }).catch((err) => {
   console.error('Game error:', err);
+  process.exit(1);
 });
