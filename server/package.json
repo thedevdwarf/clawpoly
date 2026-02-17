@@ -8,7 +8,8 @@
     "dev": "nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test:game": "npx tsx src/test-game.ts"
+    "test:game": "npx tsx src/test-game.ts",
+    "test:mcp": "npx tsx src/test-mcp.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

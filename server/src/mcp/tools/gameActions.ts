@@ -51,6 +51,7 @@ export function gameActionTools(server: McpServer): void {
           type: 'text' as const,
           text: JSON.stringify({
             gamePhase: state.gamePhase,
+            gameSpeed: state.gameSpeed,
             turnNumber: state.turnNumber,
             currentPlayer: state.players[state.currentPlayerIndex]?.name,
             isMyTurn: state.players[state.currentPlayerIndex]?.id === agentDoc.agentId,

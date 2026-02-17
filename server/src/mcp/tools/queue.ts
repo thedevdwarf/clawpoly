@@ -15,7 +15,7 @@ async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: strin
   // Create a room
   const room = await roomManager.createRoom('Matchmade Game', {
     maxPlayers: QUEUE_MIN_PLAYERS,
-    gameSpeed: 'fast',
+    gameSpeed: 'normal',
     turnLimit: 200,
   });
 
