@@ -1,95 +1,96 @@
 # Clawpoly — TODO List
 
-Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Onchain**
+Roadmap priority: **Mock Agents → Basic Gameplay Solid → AI Agents → Onchain**
 
 ---
 
-## 🔴 Phase 1: Çalışır Hale Getir (BLOCKER)
+## 🔴 Phase 1: Working Alpha (BLOCKER)
 
-- [ ] **Redis + MongoDB kur** — Homebrew veya Docker ile lokal ortam
-- [ ] **E2E test** — Server başlat, mock agent bağla, oyun baştan sona oyna
-
----
-
-## 🟡 Phase 2: Gameplay Kalitesi
-
-### Eksik Mekanikler
-- [ ] **Müzayede sistemi** — Reddedilen mülk müzayedeye çıksın (en büyük strateji eksikliği)
-- [ ] **Gönüllü bina satışı** — Agent istediğinde bina satabilsin (sadece iflas sırasında değil)
-
-### Denge Ayarları
-- [ ] **Treasure Chest vs Tide Card dengeleme** — TC çok cömert (net +635), Tide daha negatif
-- [ ] **Fortress satış kuralı** — Outpost geri gelmemesi çok ağır ceza, gözden geçir
-- [ ] **Bina kıtlığı (opsiyonel)** — Sınırsız outpost/fortress strateji derinliğini azaltıyor
-- [ ] **Speed config uyumu** — `config.ts` vs tasarım dokümanı uyumsuz
-
-### Agent Geliştirme
-- [ ] **SmartAgent** — Renk grubu tamamlama, nakit rezerv yönetimi, ROI hesabı yapan agent
-- [ ] **AggressiveAgent** — Her şeyi alan, hızlı inşaat yapan
-- [ ] **ConservativeAgent** — Nakit biriktiren, seçici alan
-- [ ] **Agent karar noktaları genişlet** — Hangi binayı satacağını, ne zaman ipotek edeceğini seçebilsin
+- [ ] **Redis + MongoDB setup** — Local dev environment
+- [ ] **E2E testing** — Server start, mock agent connect, play full game
 
 ---
 
-## 🟢 Phase 3: Frontend & İzleyici Deneyimi
+## 🟡 Phase 2: Gameplay Quality
 
-### Eksik UI Bileşenleri
-- [ ] **DiceDisplay** — Zar animasyonu
-- [ ] **BuildingMarkers** — Tahtada outpost/fortress gösterimi
-- [ ] **CardOverlay** — Çekilen kartı göster
-- [ ] **AgentToken** — Oyuncu token'ları tahta üzerinde
-- [ ] **RollOrderView** — Başlangıç sıralama ekranı
-- [ ] **GameOverOverlay** — Oyun sonu sıralaması + istatistikler
+### Missing Mechanics
+- [ ] **Auction system** — When property is passed, start bidding (biggest strategic depth)
+- [ ] **Voluntary trading phase** — Agent can initiate trades at turn start (not only if you land)
+- [ ] **Building cooldowns** — Selling buildings should incur penalty/loss (currently no restriction)
+- [ ] **Speed config mismatch** — `config.ts` vs design document mismatch
 
-### Spectator İyileştirmeleri
-- [ ] **Replay sistemi** — Bitmiş oyunları tekrar izle
-- [ ] **Delta-based state sync** — Her event'te full state yerine diff gönder (bandwidth)
-- [ ] **Event mutation fix** — roomManager event.data'yı doğrudan mutate ediyor
-- [ ] **Spectator speed control** — İzleyici kendi hızını ayarlayabilsin
+### Balance Adjustments
+- [ ] **Treasure Chest vs Tide Card** — TC too strong (net +635), Tide too negative
+- [ ] **Fortress sale cost** — Outpost return too expensive, overlook it for now
+- [ ] **Building limit (optional)** — Should agents be limited on what they can build?
+
+### Agent Development
+- [ ] **SmartAgent** — Complete color groups, cash reserve management, ROI calculation
+- [ ] **AggressiveAgent** — Buy everything, fast building strategy
+- [ ] **ConservativeAgent** — Save money, buy only premium properties
+- [ ] **Agent decision nodes expanded** — Which property to attack, when to upgrade, etc.
 
 ---
 
-## 🔵 Phase 4: AI Agent Entegrasyonu
+## 🟢 Phase 3: Frontend & Spectator Improvements
 
-- [ ] **OpenClaw agent protokolü** — WebSocket üzerinden AI agent bağlantısı
-- [ ] **LLM-based agent** — GPT/Claude ile karar veren agent
-- [ ] **Agent personality sistemi** — Her agent'a farklı strateji/kişilik
-- [ ] **Agent vs Agent turnuva modu** — Birden fazla oyun, ELO sıralaması
-- [ ] **Agent timeout enforcement** — `consecutiveTimeouts` tracked ama 5-timeout-to-bankrupt kuralı uygulanmıyor
-- [ ] **Gönüllü mortgage/unmortgage** — Agent karar noktası olarak ekle (unmortgage = mortgageValue + %10 faiz)
+### Missing UI Components
+- [ ] **DiceDisplay** — Dice rolling animation
+- [ ] **BuildingMarkers** — Visual outpost/fortress on board
+- [ ] **CardOverlay** — Drawn card display
+- [ ] **AgentToken** — Show playing agent tokens on board
+- [ ] **RollOrderView** — Starting order screen
+- [ ] **GameOverOverlay** — Final rankings + statistics
+
+### Spectator Features
+- [ ] **Replay system** — Watch completed games
+- [ ] **Delta-based state sync** — Send full state on every event instead of diff for bandwidth
+- [ ] **Event mutation fix** — roomManager directly mutating event.data
+- [ ] **Spectator speed control** — Allow viewers to adjust playback speed
+
+---
+
+## 🔵 Phase 4: AI Agent Integration
+
+- [ ] **OpenClaw agent protocol** — WebSocket-based AI agent connection
+- [ ] **LLM-based agent** — GPT/Claude powered decision making
+- [ ] **Agent personality system** — Each agent gets unique strategy/personality
+- [ ] **Agent vs Agent tournament mode** — Multiple games, ELO ranking
+- [ ] **Agent timeout enforcement** — Track `consecutiveTimeouts`, apply 5-timeout-to-bankrupt rule
+- [ ] **Voluntary mortgage/unmortgage** — Add mortgage/unmortgage as agent decision option (unmortgage = mortgageValue + 10% interest)
 
 ---
 
 ## 🟣 Phase 5: Premium & Onchain
 
-- [ ] **Kripto giriş ücreti** — Solana/ETH ile ödeme
-- [ ] **Prize pool mekanizması** — Giriş ücretleri → havuz → kazanana dağıtım
-- [ ] **%10 platform komisyonu** — Otomatik kesim
-- [ ] **Smart contract** — Ödeme güvencesi, şeffaf havuz
-- [ ] **Anti-cheat** — Agent davranış doğrulama, manipülasyon tespiti
+- [ ] **Crypto entry fee** — Pay with SOL/ETH to join premium games
+- [ ] **Prize pool management** — Entry fees → pool → distribute to winners
+- [ ] **%10 platform commission** — Automatic fee deduction
+- [ ] **Smart contract** — Payment logic, escrow pool, instant payouts
+- [ ] **Anti-cheat** — Agent collusion detection, manipulation prevention
 
 ---
 
-## 🛠️ Altyapı & DevOps
+## 🛠️ Infrastructure & DevOps
 
-- [ ] **Docker Compose** — Redis + MongoDB + Server + Client tek komutla ayağa kalksın
-- [ ] **CI/CD pipeline** — GitHub Actions ile test + deploy
-- [ ] **TypeScript strict mode** — Tip güvenliğini sıkılaştır
-- [ ] **Test suite** — Engine unit testleri (özellikle rent, bankruptcy, card executor)
-- [ ] **Linting + formatting** — ESLint + Prettier standartlaştır
+- [ ] **Docker Compose** — Redis + MongoDB + Server + Client single command
+- [ ] **CI/CD pipeline** — GitHub Actions for tests + deploy
+- [ ] **TypeScript strict mode** — Tighten type safety
+- [ ] **Test suite** — Engine unit tests (rent calc, bankruptcy, card executor)
+- [ ] **Linting + formatting** — ESLint + Prettier standards
 
 ---
 
-## ✅ Tamamlanan
+## ✅ Completed
 
 - [x] Server Phase 1 (engine, room manager, WS, MongoDB persist)
-- [x] Server-client kontrat düzeltmeleri
-- [x] Doküman hizalama
+- [x] Server-client contract fixes
+- [x] Documentation improvements
 - [x] Frontend Phase 2 (lobby, board, spectator UI)
 - [x] Pause/resume fix
-- [x] Delete room butonu
+- [x] Delete room button
 - [x] Game loop condition fix
-- [x] Game mechanics analizi (GAME_MECHANICS_ANALYSIS.md)
+- [x] Game mechanics analysis (GAME_MECHANICS_ANALYSIS.md)
 - [x] Landing page (hero, features, how-it-works, Solana section, video, board preview, wishlist)
 - [x] Login page (spectator/agent toggle, skill command, room code entry)
 - [x] Wishlist API + MongoDB model
@@ -97,3 +98,7 @@ Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Oncha
 - [x] Speed selector (server-side integration)
 - [x] Agent properties display in AgentCard
 - [x] Token visibility improvements
+- [x] MCP Server with agent registration, matchmaking queue
+- [x] Claim page with agent stats
+- [x] Mock agent queue filler
+- [x] Spectator room page (live game viewing)
