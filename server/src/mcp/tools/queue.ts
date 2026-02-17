@@ -2,9 +2,43 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { AgentModel } from '../../models/Agent';
 import { getRedis } from '../../redis';
+import { roomManager, registerAgent } from '../../room/roomManager';
+import { getOrCreateMcpAgent, setAgentRoom } from '../../engine/agents/mcpAgent';
 
 const QUEUE_KEY = 'queue:waiting';
 const QUEUE_MIN_PLAYERS = 4;
+
+// Maps agentId → agentToken for queue participants
+const queuedAgentTokens = new Map<string, string>();
+
+async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: string; roomId: string }> {
+  // Create a room
+  const room = await roomManager.createRoom('Matchmade Game', {
+    maxPlayers: QUEUE_MIN_PLAYERS,
+    gameSpeed: 'fast',
+    turnLimit: 200,
+  });
+
+  // Join each agent to the room and register MCP agents
+  for (const agentId of agentIds) {
+    const agentDoc = await AgentModel.findOne({ agentId }).lean();
+    if (!agentDoc) continue;
+
+    const joinResult = await roomManager.joinRoom(room.roomId, agentDoc.name, agentId);
+
+    // Create and register MCP agent for the engine
+    const mcpAgent = getOrCreateMcpAgent(agentId, agentDoc.agentToken!);
+    mcpAgent.roomId = room.roomId;
+    setAgentRoom(agentId, room.roomId);
+    registerAgent(room.roomId, joinResult.playerId, mcpAgent);
+  }
+
+  // Start the game
+  await roomManager.startGame(room.roomId);
+
+  console.log(`[MCP] Matchmade game started: room ${room.roomCode} (${room.roomId})`);
+  return { roomCode: room.roomCode, roomId: room.roomId };
+}
 
 export function queueTools(server: McpServer): void {
   server.tool(
@@ -24,8 +58,9 @@ export function queueTools(server: McpServer): void {
         const redis = getRedis();
         const score = Date.now();
 
-        // Add to queue (score = timestamp for FIFO ordering)
+        // Add to queue
         await redis.zadd(QUEUE_KEY, score, agent.agentId);
+        queuedAgentTokens.set(agent.agentId, agentToken);
 
         const queueSize = await redis.zcard(QUEUE_KEY);
         console.log(`[MCP] Agent ${agent.name} joined queue (${queueSize}/${QUEUE_MIN_PLAYERS})`);
@@ -35,17 +70,21 @@ export function queueTools(server: McpServer): void {
           const agentIds = await redis.zrange(QUEUE_KEY, 0, QUEUE_MIN_PLAYERS - 1);
           await redis.zrem(QUEUE_KEY, ...agentIds);
 
-          // TODO: Create room and start game via roomManager
-          // For now, return that a game is starting
-          console.log(`[MCP] Matchmaking: starting game with agents: ${agentIds.join(', ')}`);
+          // Clean up token map
+          for (const id of agentIds) {
+            queuedAgentTokens.delete(id);
+          }
+
+          const { roomCode } = await startMatchmadeGame(agentIds);
 
           return {
             content: [{
               type: 'text' as const,
               text: JSON.stringify({
                 status: 'game_starting',
-                players: agentIds,
-                message: 'Game is starting! 4 agents matched. Use clawpoly_get_state to see the board.',
+                roomCode,
+                players: agentIds.length,
+                message: `Game is starting! Room code: ${roomCode}. Use clawpoly_get_state to see the board and make your moves.`,
               }, null, 2),
             }],
           };
