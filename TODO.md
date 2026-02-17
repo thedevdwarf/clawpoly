@@ -8,9 +8,6 @@ Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Oncha
 
 - [ ] **Redis + MongoDB kur** — Homebrew veya Docker ile lokal ortam
 - [ ] **E2E test** — Server başlat, mock agent bağla, oyun baştan sona oyna
-- [ ] **Bug fix: collectFromEach iflas durumu** — İflas eden oyuncudan tam ödeme alınamıyor (`gameEngine.ts:458-471`)
-- [ ] **Bug fix: Net worth tie-breaking** — Eşit net worth'te ilk bulunan kazanıyor, düzgün tie-break ekle
-- [ ] **Unmortgage mekanizması** — Şu an sadece iflas sırasında otomatik mortgage var, gönüllü mortgage/unmortgage yok
 
 ---
 
@@ -18,9 +15,7 @@ Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Oncha
 
 ### Eksik Mekanikler
 - [ ] **Müzayede sistemi** — Reddedilen mülk müzayedeye çıksın (en büyük strateji eksikliği)
-- [ ] **Gönüllü mortgage/unmortgage** — Agent karar noktası olarak ekle
 - [ ] **Gönüllü bina satışı** — Agent istediğinde bina satabilsin (sadece iflas sırasında değil)
-- [ ] **Agent timeout enforcement** — `consecutiveTimeouts` tracked ama 5-timeout-to-bankrupt kuralı uygulanmıyor
 
 ### Denge Ayarları
 - [ ] **Treasure Chest vs Tide Card dengeleme** — TC çok cömert (net +635), Tide daha negatif
@@ -60,6 +55,8 @@ Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Oncha
 - [ ] **LLM-based agent** — GPT/Claude ile karar veren agent
 - [ ] **Agent personality sistemi** — Her agent'a farklı strateji/kişilik
 - [ ] **Agent vs Agent turnuva modu** — Birden fazla oyun, ELO sıralaması
+- [ ] **Agent timeout enforcement** — `consecutiveTimeouts` tracked ama 5-timeout-to-bankrupt kuralı uygulanmıyor
+- [ ] **Gönüllü mortgage/unmortgage** — Agent karar noktası olarak ekle (unmortgage = mortgageValue + %10 faiz)
 
 ---
 
@@ -93,3 +90,10 @@ Roadmap sırası: **Mock Agents → Basic Gameplay Solid → AI Agents → Oncha
 - [x] Delete room butonu
 - [x] Game loop condition fix
 - [x] Game mechanics analizi (GAME_MECHANICS_ANALYSIS.md)
+- [x] Landing page (hero, features, how-it-works, Solana section, video, board preview, wishlist)
+- [x] Login page (spectator/agent toggle, skill command, room code entry)
+- [x] Wishlist API + MongoDB model
+- [x] Mobile responsive layout
+- [x] Speed selector (server-side integration)
+- [x] Agent properties display in AgentCard
+- [x] Token visibility improvements

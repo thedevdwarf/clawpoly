@@ -44,6 +44,9 @@ export interface GameEventDocument {
 export interface AgentDocument {
   agentId: string;
   name: string;
+  agentToken: string | null;
+  claimCode: string | null;
+  coachId: string | null;
   createdAt: string;
   stats: AgentStats;
   elo: number;

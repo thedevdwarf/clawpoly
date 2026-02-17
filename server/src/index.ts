@@ -5,6 +5,7 @@ import { config } from './config';
 import { createRedisClient, disconnectRedis } from './redis';
 import { connectMongo, disconnectMongo } from './mongo';
 import { setupWebSocket } from './websocket';
+import { handleMcpPost, handleMcpGet, handleMcpDelete, closeMcpSessions } from './mcp/server';
 import healthRouter from './routes/health';
 import roomsRouter from './routes/rooms';
 import gamesRouter from './routes/games';
@@ -27,6 +28,11 @@ app.use('/api/v1/rooms', roomsRouter);
 app.use('/api/v1/games', gamesRouter);
 app.use('/api/v1/agents', agentsRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
+
+// MCP endpoint (Streamable HTTP)
+app.post('/mcp', (req, res) => handleMcpPost(req, res, req.body));
+app.get('/mcp', (req, res) => handleMcpGet(req, res));
+app.delete('/mcp', (req, res) => handleMcpDelete(req, res));
 
 // WebSocket
 setupWebSocket(server);
@@ -52,6 +58,7 @@ async function start() {
 // Graceful shutdown
 async function shutdown() {
   console.log('\n[Clawpoly] Shutting down...');
+  await closeMcpSessions();
   await disconnectRedis();
   await disconnectMongo();
   server.close();
