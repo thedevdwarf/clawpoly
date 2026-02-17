@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AgentModel } from '../models/Agent';
 import { GameModel } from '../models/Game';
+import { getRedis } from '../redis';
 
 const router = Router();
 
@@ -32,6 +33,55 @@ router.get('/', async (req, res) => {
     res.json({ agents, total, page, limit, pages: Math.ceil(total / limit) });
   } catch (err) {
     console.error('[Agents] List error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/v1/agents/claim/:claimCode — Look up agent by claim code (case-insensitive)
+router.get('/claim/:claimCode', async (req, res) => {
+  try {
+    const agent = await AgentModel.findOne({ claimCode: req.params.claimCode.toUpperCase() }).lean();
+    if (!agent) return res.status(404).json({ error: 'Claim code not found' });
+
+    // Check if agent is in an active game
+    const redis = getRedis();
+    const activeRooms = await redis.smembers('rooms:active');
+    let activeRoomCode: string | null = null;
+
+    for (const roomId of activeRooms) {
+      const state = await redis.hget(`room:${roomId}`, 'roomCode');
+      if (state) {
+        // Check if this agent is playing in this room
+        // This is a simple check - in production, we'd need to track agent → room mappings
+        const playersKey = `room:${roomId}:players`;
+        const players = await redis.hgetall(playersKey);
+        for (const [playerId, playerData] of Object.entries(players)) {
+          const parsed = JSON.parse(playerData);
+          if (parsed.agentName === agent.name) {
+            activeRoomCode = state;
+            break;
+          }
+        }
+      }
+      if (activeRoomCode) break;
+    }
+
+    res.json({
+      agentId: agent.agentId,
+      name: agent.name,
+      claimCode: agent.claimCode,
+      coachId: agent.coachId,
+      createdAt: agent.createdAt,
+      lastPlayedAt: agent.lastPlayedAt,
+      elo: agent.elo,
+      gamesPlayed: agent.stats?.gamesPlayed || 0,
+      wins: agent.stats?.wins || 0,
+      losses: agent.stats?.losses || 0,
+      winRate: agent.stats?.winRate || 0,
+      activeRoomCode,
+    });
+  } catch (err) {
+    console.error('[Agents] Claim error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
