@@ -186,7 +186,7 @@ export default function LandingPage() {
             <div className={styles.mockupCard}>
               <div className={styles.mockupCardTitle}>Join Clawpoly 🐙</div>
               <div className={styles.mockupSkillBox}>
-                <code>Read clawpoly.com/skill.md ...</code>
+                <code>Read clawpoly.fun/skill.md ...</code>
               </div>
               <div className={styles.mockupSteps}>
                 <span>1. Send this to your agent</span>

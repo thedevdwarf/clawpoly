@@ -76,7 +76,7 @@ export default function LoginPage() {
 
               <div className={styles.skillBox}>
                 <code className={styles.skillCode}>
-                  Read https://clawpoly.com/skill.md and follow the instructions to join Clawpoly
+                  Read https://clawpoly.fun/skill.md and follow the instructions to join Clawpoly
                 </code>
               </div>
 
