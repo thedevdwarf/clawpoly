@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AgentModel } from '../../models/Agent';
 import { getMcpAgentByToken, getAgentRoom } from '../../engine/agents/mcpAgent';
 import { loadGameState } from '../../state/redisState';
+import { bindAgentToSession } from '../sessionRegistry';
 
 function authError() {
   return {
@@ -28,30 +29,121 @@ function noPendingError(expected: string) {
 export function gameActionTools(server: McpServer): void {
   server.tool(
     'clawpoly_get_state',
-    'Get the current game state including board, players, whose turn it is, and any pending decision you need to make.',
-    { agentToken: z.string().describe('Your agent auth token') },
-    async ({ agentToken }) => {
+    `Get game state and optionally act on pending decisions in ONE call. This tool BLOCKS until you have a decision to make, then returns the full game state as JSON.
+
+IMPORTANT: The response text is a JSON string. You MUST parse it with JSON.parse() before accessing fields like pendingDecision.
+
+You can also pass an "action" parameter to respond to a pending decision and get the next state in a single call:
+- "buy" or "pass" for buy decisions
+- "build:INDEX", "upgrade:INDEX", or "skip_build" for build decisions
+- "escape_pay", "escape_card", or "escape_roll" for lobster pot decisions
+
+Flow: call get_state → see pendingDecision → call get_state again with action → resolved + next state returned. You can also use the separate action tools (clawpoly_buy_property, etc.) if you prefer.`,
+    {
+      agentToken: z.string().describe('Your agent auth token'),
+      action: z.string().optional().describe('Action for pending decision: "buy", "pass", "build:INDEX", "upgrade:INDEX", "skip_build", "escape_pay", "escape_card", "escape_roll"'),
+    },
+    async ({ agentToken, action }, extra) => {
+      // Bind agent to this MCP session for SSE push notifications
+      if (extra.sessionId) {
+        bindAgentToSession(agentToken, extra.sessionId);
+      }
+
       const agentDoc = await AgentModel.findOne({ agentToken }).lean();
-      if (!agentDoc) return authError();
+      if (!agentDoc) { console.log(`[MCP get_state] Auth failed for token: ${agentToken.slice(0, 8)}...`); return authError(); }
 
       const roomId = getAgentRoom(agentDoc.agentId);
-      if (!roomId) return noGameError();
-
-      const state = await loadGameState(roomId);
-      if (!state) return noGameError();
+      if (!roomId) { console.log(`[MCP get_state] No room for agent: ${agentDoc.name} (${agentDoc.agentId})`); return noGameError(); }
 
       const mcpAgent = getMcpAgentByToken(agentToken);
-      const pending = mcpAgent?.getPendingDecision();
+
+      // If agent sent an action, resolve the pending decision first
+      let actionResult: string | null = null;
+      if (action && mcpAgent) {
+        const actionPending = mcpAgent.getPendingDecision();
+        if (actionPending) {
+          if (actionPending.type === 'buy') {
+            if (action === 'buy') {
+              mcpAgent.resolveBuyDecision(true);
+              actionResult = 'Bought the property!';
+            } else if (action === 'pass') {
+              mcpAgent.resolveBuyDecision(false);
+              actionResult = 'Passed on the property.';
+            }
+          } else if (actionPending.type === 'build') {
+            if (action === 'skip_build') {
+              mcpAgent.resolveBuildDecision(null);
+              actionResult = 'Skipped building.';
+            } else if (action.startsWith('build:')) {
+              const idx = parseInt(action.split(':')[1], 10);
+              if (!isNaN(idx)) {
+                mcpAgent.resolveBuildDecision({ squareIndex: idx, action: 'build' });
+                actionResult = `Built outpost at index ${idx}.`;
+              }
+            } else if (action.startsWith('upgrade:')) {
+              const idx = parseInt(action.split(':')[1], 10);
+              if (!isNaN(idx)) {
+                mcpAgent.resolveBuildDecision({ squareIndex: idx, action: 'upgrade' });
+                actionResult = `Upgraded to fortress at index ${idx}.`;
+              }
+            }
+          } else if (actionPending.type === 'lobster_pot') {
+            if (action === 'escape_pay') {
+              mcpAgent.resolveLobsterPotDecision('pay');
+              actionResult = 'Paid 50 Shells to escape!';
+            } else if (action === 'escape_card') {
+              mcpAgent.resolveLobsterPotDecision('card');
+              actionResult = 'Used Escape card!';
+            } else if (action === 'escape_roll') {
+              mcpAgent.resolveLobsterPotDecision('roll');
+              actionResult = 'Rolling for doubles...';
+            }
+          }
+          if (actionResult) {
+            console.log(`[MCP get_state] Agent: ${agentDoc.name} resolved ${actionPending.type} with action="${action}": ${actionResult}`);
+            // Wait briefly for engine to process the resolved decision
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        }
+      }
+
+      // Wait for pending decision (event-driven, no polling)
+      let pending = mcpAgent?.getPendingDecision() ?? null;
+      if (!pending && mcpAgent) {
+        pending = await mcpAgent.waitForDecision(25000);
+      }
+      console.log(`[MCP get_state] Agent: ${agentDoc.name}, pendingType: ${pending?.type ?? 'none'}${actionResult ? `, prevAction: ${actionResult}` : ''}`);
+
+      const state = await loadGameState(roomId);
+      if (!state) { console.log(`[MCP get_state] No state for room: ${roomId}`); return noGameError(); }
 
       // Find this agent's player
       const myPlayer = state.players.find((p) => p.id === agentDoc.agentId);
+
+      // Build instruction for agent
+      let instruction: string;
+      if (pending) {
+        if (pending.type === 'buy') {
+          instruction = 'DECIDE NOW: call clawpoly_get_state with action="buy" to buy, or action="pass" to decline.';
+        } else if (pending.type === 'build') {
+          const buildIdxs = (pending.context.buildableSquares as Array<{ index: number }>).map((s) => s.index);
+          const upgradeIdxs = (pending.context.upgradeableSquares as Array<{ index: number }>).map((s) => s.index);
+          instruction = `DECIDE NOW: action="build:N" where N is a board index from [${buildIdxs.join(',')}], action="upgrade:N" from [${upgradeIdxs.join(',')}], or action="skip_build". Example: action="build:${buildIdxs[0] ?? 0}"`;
+        } else if (pending.type === 'lobster_pot') {
+          instruction = 'DECIDE NOW: call clawpoly_get_state with action="escape_pay", action="escape_card", or action="escape_roll".';
+        } else {
+          instruction = `PENDING DECISION: ${pending.type}. Act on it NOW.`;
+        }
+      } else {
+        instruction = 'No pending decision. Call clawpoly_get_state again (no action param) to wait for your next turn.';
+      }
 
       return {
         content: [{
           type: 'text' as const,
           text: JSON.stringify({
+            actionResult,
             gamePhase: state.gamePhase,
-            gameSpeed: state.gameSpeed,
             turnNumber: state.turnNumber,
             currentPlayer: state.players[state.currentPlayerIndex]?.name,
             isMyTurn: state.players[state.currentPlayerIndex]?.id === agentDoc.agentId,
@@ -59,6 +151,7 @@ export function gameActionTools(server: McpServer): void {
               type: pending.type,
               ...pending.context,
             } : null,
+            instruction,
             me: myPlayer ? {
               name: myPlayer.name,
               token: myPlayer.token,
@@ -117,7 +210,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveBuyDecision(true)) return noPendingError('buy');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'buy', message: 'You bought the property!' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'buy', message: 'You bought the property! NOW call clawpoly_get_state immediately to wait for your next decision.' }) }],
       };
     }
   );
@@ -131,7 +224,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveBuyDecision(false)) return noPendingError('buy');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'pass', message: 'You passed on the property.' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'pass', message: 'You passed on the property. NOW call clawpoly_get_state immediately to wait for your next decision.' }) }],
       };
     }
   );
@@ -150,7 +243,7 @@ export function gameActionTools(server: McpServer): void {
         return noPendingError('build');
       }
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'build', propertyIndex, message: 'Outpost built! You can build more if eligible.' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'build', propertyIndex, message: 'Outpost built! NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );
@@ -169,7 +262,7 @@ export function gameActionTools(server: McpServer): void {
         return noPendingError('build');
       }
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'upgrade', propertyIndex, message: 'Upgraded to Sea Fortress!' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'upgrade', propertyIndex, message: 'Upgraded to Sea Fortress! NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );
@@ -183,7 +276,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveBuildDecision(null)) return noPendingError('build');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'skip_build', message: 'Skipped building phase.' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'skip_build', message: 'Skipped building phase. NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );
@@ -197,7 +290,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveLobsterPotDecision('pay')) return noPendingError('lobster pot escape');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_pay', message: 'Paid 50 Shells to escape!' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_pay', message: 'Paid 50 Shells to escape! NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );
@@ -211,7 +304,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveLobsterPotDecision('card')) return noPendingError('lobster pot escape');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_card', message: 'Used Escape card!' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_card', message: 'Used Escape card! NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );
@@ -225,7 +318,7 @@ export function gameActionTools(server: McpServer): void {
       if (!mcpAgent) return authError();
       if (!mcpAgent.resolveLobsterPotDecision('roll')) return noPendingError('lobster pot escape');
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_roll', message: 'Rolling for doubles...' }) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, action: 'escape_roll', message: 'Rolling for doubles... NOW call clawpoly_get_state immediately.' }) }],
       };
     }
   );

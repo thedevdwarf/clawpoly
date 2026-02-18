@@ -6,6 +6,7 @@ import { registerTools } from './tools/register';
 import { queueTools } from './tools/queue';
 import { gameActionTools } from './tools/gameActions';
 import { strategyTools } from './tools/strategy';
+import { registerSession, unregisterSession } from './sessionRegistry';
 
 // Active transports keyed by session ID
 const transports: Map<string, StreamableHTTPServerTransport> = new Map();
@@ -48,11 +49,14 @@ export async function handleMcpPost(
 
   if (!sessionId && isInitializeRequest(parsedBody)) {
     // New session — create fresh server + transport
+    const server = createMcpServer();
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (sid: string) => {
         console.log(`[MCP] Session initialized: ${sid}`);
         transports.set(sid, transport);
+        registerSession(sid, server);
       },
     });
 
@@ -60,11 +64,11 @@ export async function handleMcpPost(
       const sid = transport.sessionId;
       if (sid) {
         transports.delete(sid);
+        unregisterSession(sid);
         console.log(`[MCP] Session closed: ${sid}`);
       }
     };
 
-    const server = createMcpServer();
     await server.connect(transport);
     await transport.handleRequest(req, res, parsedBody);
     return;
@@ -108,6 +112,7 @@ export async function handleMcpDelete(
 export async function closeMcpSessions(): Promise<void> {
   for (const [sid, transport] of transports) {
     try {
+      unregisterSession(sid);
       await transport.close();
     } catch (err) {
       console.error(`[MCP] Error closing session ${sid}:`, err);

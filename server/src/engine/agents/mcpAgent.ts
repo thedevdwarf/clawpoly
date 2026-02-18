@@ -23,6 +23,10 @@ export class McpAgent implements AgentDecision {
   public readonly agentToken: string;
   public roomId: string | null = null;
   private pendingDecision: PendingDecision | null = null;
+  private decisionWaiters: Array<(decision: PendingDecision | null) => void> = [];
+
+  /** Optional callback fired when a pending decision is created (used for SSE push) */
+  public onDecisionPending: ((decision: PendingDecision) => void) | null = null;
 
   constructor(agentId: string, agentToken: string) {
     this.agentId = agentId;
@@ -33,11 +37,42 @@ export class McpAgent implements AgentDecision {
     return this.pendingDecision;
   }
 
+  /** Wait for a pending decision to appear (event-driven, no polling) */
+  waitForDecision(timeoutMs: number): Promise<PendingDecision | null> {
+    if (this.pendingDecision) return Promise.resolve(this.pendingDecision);
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this.decisionWaiters = this.decisionWaiters.filter((w) => w !== wrappedResolve);
+        resolve(null);
+      }, timeoutMs);
+
+      const wrappedResolve = (decision: PendingDecision | null) => {
+        clearTimeout(timer);
+        resolve(decision);
+      };
+
+      this.decisionWaiters.push(wrappedResolve);
+    });
+  }
+
+  private notifyDecisionPending(): void {
+    if (this.pendingDecision) {
+      this.onDecisionPending?.(this.pendingDecision);
+      for (const waiter of this.decisionWaiters) {
+        waiter(this.pendingDecision);
+      }
+      this.decisionWaiters = [];
+    }
+  }
+
   resolveBuyDecision(buy: boolean): boolean {
+    console.log(`[McpAgent] resolveBuyDecision called: buy=${buy}, hasPending=${!!this.pendingDecision}, pendingType=${this.pendingDecision?.type}`);
     if (!this.pendingDecision || this.pendingDecision.type !== 'buy') return false;
     clearTimeout(this.pendingDecision.timeoutId);
     const { resolve } = this.pendingDecision;
     this.pendingDecision = null;
+    console.log(`[McpAgent] Buy decision resolved: ${buy ? 'BUY' : 'PASS'}`);
     resolve(buy);
     return true;
   }
@@ -62,8 +97,10 @@ export class McpAgent implements AgentDecision {
 
   async decideBuy(player: Player, square: Square, state: GameState): Promise<boolean> {
     return new Promise<boolean>((resolve) => {
+      console.log(`[McpAgent] decideBuy called for ${player.name} on ${square.name} ($${square.price}). Timeout: ${config.agentTimeoutMs}ms`);
       const timeoutId = setTimeout(() => {
         if (this.pendingDecision?.type === 'buy') {
+          console.log(`[McpAgent] TIMEOUT: ${player.name} buy decision expired for ${square.name}`);
           this.pendingDecision = null;
           resolve(false); // Default: pass
         }
@@ -83,6 +120,8 @@ export class McpAgent implements AgentDecision {
           yourMoney: player.money,
         },
       };
+
+      this.notifyDecisionPending();
     });
   }
 
@@ -119,6 +158,8 @@ export class McpAgent implements AgentDecision {
           yourMoney: player.money,
         },
       };
+
+      this.notifyDecisionPending();
     });
   }
 
@@ -141,6 +182,8 @@ export class McpAgent implements AgentDecision {
           yourMoney: player.money,
         },
       };
+
+      this.notifyDecisionPending();
     });
   }
 }

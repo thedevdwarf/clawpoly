@@ -4,9 +4,12 @@ import { AgentModel } from '../../models/Agent';
 import { getRedis } from '../../redis';
 import { roomManager, registerAgent } from '../../room/roomManager';
 import { getOrCreateMcpAgent, setAgentRoom } from '../../engine/agents/mcpAgent';
+import { RandomAgent } from '../../engine/agents/randomAgent';
+import { attachNotificationCallback } from '../sessionRegistry';
 
 const QUEUE_KEY = 'queue:waiting';
 const QUEUE_MIN_PLAYERS = 4;
+const BOT_NAMES = ['Reef Runner', 'Tide Chaser', 'Shell Seeker', 'Deep Diver', 'Wave Rider', 'Coral Scout'];
 
 // Maps agentId → agentToken for queue participants
 const queuedAgentTokens = new Map<string, string>();
@@ -30,6 +33,7 @@ async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: strin
     const mcpAgent = getOrCreateMcpAgent(agentId, agentDoc.agentToken!);
     mcpAgent.roomId = room.roomId;
     setAgentRoom(agentId, room.roomId);
+    attachNotificationCallback(mcpAgent);
     registerAgent(room.roomId, joinResult.playerId, mcpAgent);
   }
 
@@ -37,6 +41,38 @@ async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: strin
   await roomManager.startGame(room.roomId);
 
   console.log(`[MCP] Matchmade game started: room ${room.roomCode} (${room.roomId})`);
+  return { roomCode: room.roomCode, roomId: room.roomId };
+}
+
+async function startGameWithBots(realAgentId: string, realAgentToken: string): Promise<{ roomCode: string; roomId: string }> {
+  const room = await roomManager.createRoom('Matchmade Game', {
+    maxPlayers: 4,
+    gameSpeed: 'normal',
+    turnLimit: 200,
+  });
+
+  // Join real agent
+  const agentDoc = await AgentModel.findOne({ agentId: realAgentId }).lean();
+  if (!agentDoc) throw new Error('Agent not found');
+
+  const joinResult = await roomManager.joinRoom(room.roomId, agentDoc.name, realAgentId);
+  const mcpAgent = getOrCreateMcpAgent(realAgentId, realAgentToken);
+  mcpAgent.roomId = room.roomId;
+  setAgentRoom(realAgentId, room.roomId);
+  attachNotificationCallback(mcpAgent);
+  registerAgent(room.roomId, joinResult.playerId, mcpAgent);
+
+  // Fill remaining slots with RandomAgent bots
+  const shuffled = [...BOT_NAMES].sort(() => Math.random() - 0.5);
+  for (let i = 0; i < 3; i++) {
+    const botName = `${shuffled[i]} ${Math.floor(Math.random() * 900) + 100}`;
+    const botJoin = await roomManager.joinRoom(room.roomId, botName);
+    // Register as RandomAgent (instant decisions, no timeout)
+    registerAgent(room.roomId, botJoin.playerId, new RandomAgent());
+  }
+
+  await roomManager.startGame(room.roomId);
+  console.log(`[MCP] Game with bots started: room ${room.roomCode} (${room.roomId})`);
   return { roomCode: room.roomCode, roomId: room.roomId };
 }
 
@@ -84,7 +120,7 @@ export function queueTools(server: McpServer): void {
                 status: 'game_starting',
                 roomCode,
                 players: agentIds.length,
-                message: `Game is starting! Room code: ${roomCode}. Use clawpoly_get_state to see the board and make your moves.`,
+                message: `Game is starting! Room code: ${roomCode}. IMMEDIATELY call clawpoly_get_state now and keep calling it in a loop until the game ends. It will block until you have a decision to make.`,
               }, null, 2),
             }],
           };
@@ -105,6 +141,42 @@ export function queueTools(server: McpServer): void {
         const message = err instanceof Error ? err.message : 'Unknown error';
         return {
           content: [{ type: 'text' as const, text: `Queue join failed: ${message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  server.tool(
+    'clawpoly_start_with_bots',
+    'Start a game immediately with 3 random bot opponents. No need to wait in queue.',
+    { agentToken: z.string().describe('Your agent auth token from registration') },
+    async ({ agentToken }) => {
+      try {
+        const agent = await AgentModel.findOne({ agentToken }).lean();
+        if (!agent) {
+          return {
+            content: [{ type: 'text' as const, text: 'Invalid agent token. Register first with clawpoly_register.' }],
+            isError: true,
+          };
+        }
+
+        const { roomCode } = await startGameWithBots(agent.agentId, agentToken);
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              status: 'game_starting',
+              roomCode,
+              players: 4,
+              message: `Game started! Room code: ${roomCode}. You are playing against 3 bots. IMMEDIATELY call clawpoly_get_state now and keep calling it in a loop until the game ends. It will block until you have a decision to make.`,
+            }, null, 2),
+          }],
+        };
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return {
+          content: [{ type: 'text' as const, text: `Failed to start game: ${message}` }],
           isError: true,
         };
       }

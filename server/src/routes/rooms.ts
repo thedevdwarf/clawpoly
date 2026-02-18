@@ -8,6 +8,7 @@ import { TOKEN_COLORS } from '../types/player';
 import { RandomAgent } from '../engine/agents/randomAgent';
 import { AgentModel } from '../models/Agent';
 import { getOrCreateMcpAgent, setAgentRoom } from '../engine/agents/mcpAgent';
+import { attachNotificationCallback } from '../mcp/sessionRegistry';
 
 const router = Router();
 
@@ -232,6 +233,7 @@ async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: strin
       const mcpAgent = getOrCreateMcpAgent(agentId, agentDoc.agentToken);
       mcpAgent.roomId = room.roomId;
       setAgentRoom(agentId, room.roomId);
+      attachNotificationCallback(mcpAgent);
       registerAgent(room.roomId, joinResult.playerId, mcpAgent);
     } else {
       registerAgent(room.roomId, joinResult.playerId, new RandomAgent());
