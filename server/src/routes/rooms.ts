@@ -189,7 +189,7 @@ router.post('/:roomId/add-bots', async (req, res) => {
         properties: [],
         inLobsterPot: false,
         lobsterPotTurns: 0,
-        escapeCards: 0,
+        escapeCards: [],
         isBankrupt: false,
         connected: true,
         consecutiveTimeouts: 0,

@@ -2,6 +2,7 @@ import { GameState } from '../types/game';
 import { Player } from '../types/player';
 import { Square } from '../types/square';
 import { sellBuilding, getBuildingSellValue, playerHasBuildings } from './building';
+import { createEscapeCard } from './cards';
 
 export interface BankruptcyResult {
   wentBankrupt: boolean;
@@ -41,7 +42,7 @@ export function resolveBankruptcy(
       transferAssetsToCreditor(player, creditor, state.board);
     }
   } else {
-    returnAssetsToBank(player, state.board);
+    returnAssetsToBank(player, state.board, state);
   }
 
   return { wentBankrupt: true };
@@ -102,8 +103,8 @@ function transferAssetsToCreditor(debtor: Player, creditor: Player, board: Squar
   debtor.money = 0;
 
   // Transfer escape cards
-  creditor.escapeCards += debtor.escapeCards;
-  debtor.escapeCards = 0;
+  creditor.escapeCards.push(...debtor.escapeCards);
+  debtor.escapeCards = [];
 
   // Transfer properties
   for (const propIndex of debtor.properties) {
@@ -113,9 +114,15 @@ function transferAssetsToCreditor(debtor: Player, creditor: Player, board: Squar
   debtor.properties = [];
 }
 
-function returnAssetsToBank(debtor: Player, board: Square[]): void {
+function returnAssetsToBank(debtor: Player, board: Square[], state: GameState): void {
   debtor.money = 0;
-  debtor.escapeCards = 0;
+
+  // Return held escape cards to their respective decks
+  for (const cardType of debtor.escapeCards) {
+    const deck = cardType === 'tide' ? state.tideCards : state.treasureChestCards;
+    deck.push(createEscapeCard(cardType));
+  }
+  debtor.escapeCards = [];
 
   for (const propIndex of debtor.properties) {
     const square = board[propIndex];

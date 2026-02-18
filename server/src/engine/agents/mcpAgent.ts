@@ -137,7 +137,7 @@ export class McpAgent implements AgentDecision {
         timeoutId,
         context: {
           turnsTrapped: player.lobsterPotTurns,
-          hasEscapeCard: player.escapeCards > 0,
+          hasEscapeCard: player.escapeCards.length > 0,
           yourMoney: player.money,
         },
       };

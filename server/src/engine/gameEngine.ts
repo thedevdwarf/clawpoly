@@ -15,6 +15,8 @@ import {
 } from './building';
 import { resolveBankruptcy, calculateNetWorth } from './bankruptcy';
 import { executeCard, CardResult } from './cardExecutor';
+import { Card } from '../types/cards';
+import { createEscapeCard } from './cards';
 import { SPEED_DELAYS } from '../config';
 
 export class GameEngine {
@@ -202,8 +204,10 @@ export class GameEngine {
     const agent = this.getAgent(player.id);
     const decision = await agent.decideLobsterPot(player, this.state);
 
-    if (decision === 'card' && player.escapeCards > 0) {
-      player.escapeCards--;
+    if (decision === 'card' && player.escapeCards.length > 0) {
+      const cardType = player.escapeCards.pop()!;
+      const deck = cardType === 'tide' ? this.state.tideCards : this.state.treasureChestCards;
+      deck.push(createEscapeCard(cardType));
       this.freeFromLobsterPot(player, 'card');
       await this.rollMoveAndAct(player);
       return;
@@ -379,7 +383,6 @@ export class GameEngine {
     if (deck.length === 0) return;
 
     const card = deck.shift()!;
-    deck.push(card); // Return to bottom
 
     await this.emit('game:card_drawn', player.id, {
       cardType: card.type,
@@ -388,13 +391,19 @@ export class GameEngine {
     });
 
     const result = executeCard(card, player, this.state);
-    await this.applyCardResult(player, result);
+
+    // Escape cards are held by the player, not returned to deck
+    if (!result.earnedEscapeCard) {
+      deck.push(card); // Return to bottom
+    }
+
+    await this.applyCardResult(player, result, card);
   }
 
-  private async applyCardResult(player: Player, result: CardResult): Promise<void> {
-    // Escape card
+  private async applyCardResult(player: Player, result: CardResult, card: Card): Promise<void> {
+    // Escape card — held by the player (already removed from deck in handleCardSquare)
     if (result.earnedEscapeCard) {
-      player.escapeCards++;
+      player.escapeCards.push(card.type);
       return;
     }
 

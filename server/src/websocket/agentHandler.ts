@@ -119,7 +119,7 @@ export class WebSocketAgent implements AgentDecision {
   async decideLobsterPot(player: Player, _state: GameState): Promise<'pay' | 'card' | 'roll'> {
     return this.requestDecision('agent:lobster_pot_decision', {
       turnsTrapped: player.lobsterPotTurns,
-      hasEscapeCard: player.escapeCards > 0,
+      hasEscapeCard: player.escapeCards.length > 0,
       yourMoney: player.money,
     }, 'roll');
   }

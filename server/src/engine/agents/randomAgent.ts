@@ -37,7 +37,7 @@ export class RandomAgent implements AgentDecision {
   }
 
   async decideLobsterPot(player: Player, _state: GameState): Promise<'pay' | 'card' | 'roll'> {
-    if (player.escapeCards > 0 && Math.random() > 0.5) return 'card';
+    if (player.escapeCards.length > 0 && Math.random() > 0.5) return 'card';
     if (player.money >= 50 && Math.random() > 0.5) return 'pay';
     return 'roll';
   }

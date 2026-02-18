@@ -1,4 +1,11 @@
-import { Card } from '../types/cards';
+import { Card, CardType } from '../types/cards';
+
+export function createEscapeCard(deckType: string): Card {
+  if (deckType === 'tide') {
+    return { id: 9, type: 'tide', text: 'Escape the Lobster Pot Free card', action: 'escape_lobster_pot', data: {} };
+  }
+  return { id: 5, type: 'treasure_chest', text: 'Escape the Lobster Pot Free card', action: 'escape_lobster_pot', data: {} };
+}
 
 export function createTideCards(): Card[] {
   return shuffle([...TIDE_CARDS]);

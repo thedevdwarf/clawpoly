@@ -19,7 +19,7 @@ export interface Player {
   properties: number[];
   inLobsterPot: boolean;
   lobsterPotTurns: number;
-  escapeCards: number;
+  escapeCards: string[];
   isBankrupt: boolean;
   connected: boolean;
   consecutiveTimeouts: number;

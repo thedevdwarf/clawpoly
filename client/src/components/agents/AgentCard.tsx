@@ -67,7 +67,7 @@ export default function AgentCard({ player, isActive }: AgentCardProps) {
       )}
 
       <div className={styles.stats}>
-        {player.escapeCards > 0 && <span>Escape: {player.escapeCards}</span>}
+        {player.escapeCards.length > 0 && <span>Escape: {player.escapeCards.length}</span>}
       </div>
 
       {player.inLobsterPot && (
