@@ -7,7 +7,10 @@ import { Player } from '@/types/player';
 import { Square } from '@/types/square';
 import { setWebSocket, getWebSocket } from './webSocketInstance';
 
-const WS_BASE = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000';
+const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
+const WS_BASE = isLocal
+  ? (process.env.NEXT_PUBLIC_LOCAL_WS_URL || 'ws://localhost:3000')
+  : (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:3000');
 const MAX_RETRY_DELAY = 30000;
 
 export function useWebSocket() {

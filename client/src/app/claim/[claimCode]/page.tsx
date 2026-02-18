@@ -27,7 +27,10 @@ export default function ClaimPage({ params }: { params: Promise<{ claimCode: str
   useEffect(() => {
     async function fetchClaim() {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+        const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
+        const baseUrl = isLocal
+          ? (process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:3000/api/v1')
+          : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1');
         const res = await fetch(`${baseUrl}/agents/claim/${claimCode}`);
         if (!res.ok) throw new Error('Claim code not found');
         const result = await res.json();

@@ -1,6 +1,9 @@
 import { RoomResponse, GameResponse, LeaderboardEntry } from '@/types/api';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const isLocal = process.env.NEXT_PUBLIC_LOCAL === 'true';
+const BASE_URL = isLocal
+  ? (process.env.NEXT_PUBLIC_LOCAL_API_URL || 'http://localhost:3000/api/v1')
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1');
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
