@@ -30,7 +30,7 @@ export class GameEngine {
   constructor(state: GameState, agents: Map<string, AgentDecision>) {
     this.state = state;
     this.agents = agents;
-    this.delayMs = SPEED_DELAYS[state.gameSpeed] || 500;
+    this.delayMs = SPEED_DELAYS[state.gameSpeed] ?? 500;
   }
 
   // --- Pause/Resume ---
