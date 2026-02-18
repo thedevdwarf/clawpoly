@@ -17,9 +17,15 @@ const server = http.createServer(app);
 
 // Middleware
 app.use(cors({
-  origin: true, // Allow all origins (configure specific origins in production)
+  origin: true,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
+
+// Handle preflight requests explicitly
+app.options('*', cors());
+
 app.use(express.json());
 
 // Routes
