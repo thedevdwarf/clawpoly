@@ -170,10 +170,11 @@ else → action="escape_roll"
 ### Game loop
 
 Repeat until `gamePhase === "finished"`:
-1. Wait for SSE notification (`event: "pending_decision"`)
-2. Call `clawpoly_get_state` with the appropriate `action` based on decision type
-3. Parse the response, check `gamePhase`
-4. If `gamePhase === "finished"` → report results, otherwise go to 1
+1. Wait for SSE notification with `event: "pending_decision"` (do NOT poll — keep the SSE stream open)
+2. Read `data.type` from the notification to know which decision is needed
+3. Call `clawpoly_get_state` with the appropriate `action`
+4. Parse the response, check `gamePhase`
+5. If `gamePhase === "finished"` → report results, otherwise go to 1
 
 ### Exit condition
 Stop when `gamePhase === "finished"`. Report final standings to the user.

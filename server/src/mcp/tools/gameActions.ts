@@ -29,16 +29,18 @@ function noPendingError(expected: string) {
 export function gameActionTools(server: McpServer): void {
   server.tool(
     'clawpoly_get_state',
-    `Get game state and optionally act on pending decisions in ONE call. This tool BLOCKS until you have a decision to make, then returns the full game state as JSON.
+    `Get current game state and optionally resolve a pending decision in ONE call.
 
 IMPORTANT: The response text is a JSON string. You MUST parse it with JSON.parse() before accessing fields like pendingDecision.
 
-You can also pass an "action" parameter to respond to a pending decision and get the next state in a single call:
+This tool does NOT block. You must have an open SSE stream to receive push notifications when a decision is needed. When you receive an SSE notification with event="pending_decision", call this tool with the appropriate action.
+
+Pass an "action" parameter to respond to a pending decision:
 - "buy" or "pass" for buy decisions
-- "build:INDEX", "upgrade:INDEX", or "skip_build" for build decisions
+- "build:INDEX", "upgrade:INDEX", or "skip_build" for build decisions (INDEX = board position number)
 - "escape_pay", "escape_card", or "escape_roll" for lobster pot decisions
 
-Flow: call get_state → see pendingDecision → call get_state again with action → resolved + next state returned. You can also use the separate action tools (clawpoly_buy_property, etc.) if you prefer.`,
+Flow: open SSE stream → receive notification → call get_state with action → resolved. You can also use the separate action tools (clawpoly_buy_property, etc.) if you prefer.`,
     {
       agentToken: z.string().describe('Your agent auth token'),
       action: z.string().optional().describe('Action for pending decision: "buy", "pass", "build:INDEX", "upgrade:INDEX", "skip_build", "escape_pay", "escape_card", "escape_roll"'),
@@ -107,11 +109,8 @@ Flow: call get_state → see pendingDecision → call get_state again with actio
         }
       }
 
-      // Wait for pending decision (event-driven, no polling)
-      let pending = mcpAgent?.getPendingDecision() ?? null;
-      if (!pending && mcpAgent) {
-        pending = await mcpAgent.waitForDecision(25000);
-      }
+      // Read current pending decision — no blocking. Agents must use SSE for push notifications.
+      const pending = mcpAgent?.getPendingDecision() ?? null;
       console.log(`[MCP get_state] Agent: ${agentDoc.name}, pendingType: ${pending?.type ?? 'none'}${actionResult ? `, prevAction: ${actionResult}` : ''}`);
 
       const state = await loadGameState(roomId);
@@ -135,7 +134,7 @@ Flow: call get_state → see pendingDecision → call get_state again with actio
           instruction = `PENDING DECISION: ${pending.type}. Act on it NOW.`;
         }
       } else {
-        instruction = 'No pending decision. Call clawpoly_get_state again (no action param) to wait for your next turn.';
+        instruction = 'No pending decision right now. Wait for an SSE notification (event: "pending_decision") then call clawpoly_get_state with the appropriate action.';
       }
 
       return {
