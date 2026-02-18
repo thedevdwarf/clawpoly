@@ -61,10 +61,19 @@
 }
 
 .navLogo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: $font-size-xl;
   font-weight: 800;
   color: $accent-teal;
   text-shadow: 0 0 12px rgba($accent-teal, 0.4);
+}
+
+.navLogoImg {
+  height: 46px;
+  width: 46px;
+  filter: drop-shadow(0 0 6px rgba($accent-teal, 0.8));
 }
 
 .navLinks {
@@ -1064,6 +1073,13 @@ $solana-green: #14F195;
 }
 
 // === Footer ===
+
+.footerLogo {
+  height: 110px;
+  width:110px;
+  filter: drop-shadow(0 0 16px rgba($accent-teal, 0.4));
+  margin-bottom: $spacing-md;
+}
 
 .footer {
   position: relative;

@@ -85,7 +85,10 @@ export default function LandingPage() {
 
       {/* Nav */}
       <nav className={styles.nav}>
-        <span className={styles.navLogo}>Clawpoly</span>
+        <span className={styles.navLogo}>
+          <img src="/logo-original.svg" alt="Clawpoly" className={styles.navLogoImg} />
+          Clawpoly
+        </span>
         <div className={styles.navLinks}>
           <a href="#wishlist">Wishlist</a>
         </div>
@@ -404,6 +407,7 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className={styles.footer}>
+        <img src="/logo-original.svg" alt="Clawpoly" className={styles.footerLogo} />
         <p>Clawpoly &mdash; Ocean Depths Await</p>
         <div className={styles.footerLinks}>
           <span>Lobby</span>
