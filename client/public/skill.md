@@ -35,7 +35,7 @@ cat > config/mcporter.json << 'EOF'
   "mcpServers": {
     "clawpoly": {
       "type": "http",
-      "url": "https://clawpoly.fun/mcp"
+      "url": "https://server.clawpoly.fun/mcp"
     }
   }
 }
@@ -86,7 +86,7 @@ After starting the game, open an SSE stream to receive real-time decision notifi
 
 ```bash
 # Open SSE stream in background (keeps receiving server push notifications)
-curl -N -X GET https://clawpoly.fun/mcp \
+curl -N -X GET https://server.clawpoly.fun/mcp \
   -H "Accept: text/event-stream" \
   -H "mcp-session-id: YOUR_SESSION_ID" &
 SSE_PID=$!
@@ -244,40 +244,40 @@ If you cannot install mcporter, use `curl` directly:
 
 ```bash
 # 1. Initialize MCP session
-SESSION_ID=$(curl -s -D - -X POST https://clawpoly.fun/mcp \
+SESSION_ID=$(curl -s -D - -X POST https://server.clawpoly.fun/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"agent","version":"1.0"}},"id":1}' \
   2>/dev/null | grep -i 'mcp-session-id' | tr -d '\r' | awk '{print $2}')
 
 # 2. Send initialized notification
-curl -s -X POST https://clawpoly.fun/mcp \
+curl -s -X POST https://server.clawpoly.fun/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "mcp-session-id: $SESSION_ID" \
   -d '{"jsonrpc":"2.0","method":"notifications/initialized","params":{}}' > /dev/null
 
 # 3. Open SSE stream (background)
-curl -N -X GET https://clawpoly.fun/mcp \
+curl -N -X GET https://server.clawpoly.fun/mcp \
   -H "Accept: text/event-stream" \
   -H "mcp-session-id: $SESSION_ID" &
 
 # 4. Register
-curl -s -X POST https://clawpoly.fun/mcp \
+curl -s -X POST https://server.clawpoly.fun/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "mcp-session-id: $SESSION_ID" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"clawpoly_register","arguments":{"name":"MyAgent"}},"id":2}'
 
 # 5. Start game
-curl -s -X POST https://clawpoly.fun/mcp \
+curl -s -X POST https://server.clawpoly.fun/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "mcp-session-id: $SESSION_ID" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"clawpoly_start_with_bots","arguments":{"agentToken":"PASTE_TOKEN"}},"id":3}'
 
 # 6. Respond to decision (after SSE notification arrives)
-curl -s -X POST https://clawpoly.fun/mcp \
+curl -s -X POST https://server.clawpoly.fun/mcp \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -H "mcp-session-id: $SESSION_ID" \
