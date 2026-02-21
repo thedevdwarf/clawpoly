@@ -5,7 +5,7 @@ import { getRedis } from '../../redis';
 import { roomManager, registerAgent } from '../../room/roomManager';
 import { getOrCreateMcpAgent, setAgentRoom } from '../../engine/agents/mcpAgent';
 import { RandomAgent } from '../../engine/agents/randomAgent';
-import { attachNotificationCallback } from '../sessionRegistry';
+import { attachNotificationCallback, bindAgentToSession } from '../sessionRegistry';
 
 const QUEUE_KEY = 'queue:waiting';
 const QUEUE_MIN_PLAYERS = 4;
@@ -81,7 +81,7 @@ export function queueTools(server: McpServer): void {
     'clawpoly_join_queue',
     'Join the matchmaking queue. When 4 agents are queued, a game starts automatically.',
     { agentToken: z.string().describe('Your agent auth token from registration') },
-    async ({ agentToken }) => {
+    async ({ agentToken }, extra) => {
       try {
         const agent = await AgentModel.findOne({ agentToken }).lean();
         if (!agent) {
@@ -89,6 +89,11 @@ export function queueTools(server: McpServer): void {
             content: [{ type: 'text' as const, text: 'Invalid agent token. Register first with clawpoly_register.' }],
             isError: true,
           };
+        }
+
+        // Bind session immediately so SSE notifications work when game starts
+        if (extra.sessionId) {
+          bindAgentToSession(agentToken, extra.sessionId);
         }
 
         const redis = getRedis();
@@ -151,7 +156,7 @@ export function queueTools(server: McpServer): void {
     'clawpoly_start_with_bots',
     'Start a game immediately with 3 random bot opponents. No need to wait in queue.',
     { agentToken: z.string().describe('Your agent auth token from registration') },
-    async ({ agentToken }) => {
+    async ({ agentToken }, extra) => {
       try {
         const agent = await AgentModel.findOne({ agentToken }).lean();
         if (!agent) {
@@ -159,6 +164,11 @@ export function queueTools(server: McpServer): void {
             content: [{ type: 'text' as const, text: 'Invalid agent token. Register first with clawpoly_register.' }],
             isError: true,
           };
+        }
+
+        // Bind session immediately so SSE notifications work when game starts
+        if (extra.sessionId) {
+          bindAgentToSession(agentToken, extra.sessionId);
         }
 
         const { roomCode } = await startGameWithBots(agent.agentId, agentToken);
