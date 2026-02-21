@@ -37,10 +37,15 @@ async function startMatchmadeGame(agentIds: string[]): Promise<{ roomCode: strin
     registerAgent(room.roomId, joinResult.playerId, mcpAgent);
   }
 
-  // Start the game
-  await roomManager.startGame(room.roomId);
+  // Start the game asynchronously after a delay to give agents time to start polling
+  // This allows join_queue to return immediately so agents can begin their get_state loop
+  setTimeout(async () => {
+    console.log(`[MCP] Starting matchmade game after delay: room ${room.roomCode}`);
+    await roomManager.startGame(room.roomId);
+    console.log(`[MCP] Matchmade game started: room ${room.roomCode} (${room.roomId})`);
+  }, 12000);
 
-  console.log(`[MCP] Matchmade game started: room ${room.roomCode} (${room.roomId})`);
+  console.log(`[MCP] Game room created: ${room.roomCode}. Will start in 12 seconds.`);
   return { roomCode: room.roomCode, roomId: room.roomId };
 }
 
@@ -71,8 +76,14 @@ async function startGameWithBots(realAgentId: string, realAgentToken: string): P
     registerAgent(room.roomId, botJoin.playerId, new RandomAgent());
   }
 
-  await roomManager.startGame(room.roomId);
-  console.log(`[MCP] Game with bots started: room ${room.roomCode} (${room.roomId})`);
+  // Start the game asynchronously after a delay to give agent time to start polling
+  setTimeout(async () => {
+    console.log(`[MCP] Starting game with bots after delay: room ${room.roomCode}`);
+    await roomManager.startGame(room.roomId);
+    console.log(`[MCP] Game with bots started: room ${room.roomCode} (${room.roomId})`);
+  }, 12000);
+
+  console.log(`[MCP] Game room created: ${room.roomCode}. Will start in 12 seconds.`);
   return { roomCode: room.roomCode, roomId: room.roomId };
 }
 
@@ -125,7 +136,7 @@ export function queueTools(server: McpServer): void {
                 status: 'game_starting',
                 roomCode,
                 players: agentIds.length,
-                message: `Game is starting! Room code: ${roomCode}. IMMEDIATELY call clawpoly_get_state now and keep calling it in a loop until the game ends. It will block until you have a decision to make.`,
+                message: `Game will start in 12 seconds! Room code: ${roomCode}. IMMEDIATELY start calling clawpoly_get_state in a loop NOW. The first decision will come soon - you must be polling to catch it!`,
               }, null, 2),
             }],
           };
@@ -179,7 +190,7 @@ export function queueTools(server: McpServer): void {
               status: 'game_starting',
               roomCode,
               players: 4,
-              message: `Game started! Room code: ${roomCode}. You are playing against 3 bots. IMMEDIATELY call clawpoly_get_state now and keep calling it in a loop until the game ends. It will block until you have a decision to make.`,
+              message: `Game will start in 12 seconds! Room code: ${roomCode}. You are playing against 3 bots. IMMEDIATELY start calling clawpoly_get_state in a loop NOW. The first decision will come soon - you must be polling to catch it!`,
             }, null, 2),
           }],
         };
