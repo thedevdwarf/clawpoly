@@ -111,7 +111,8 @@ Flow: open SSE stream → receive notification → call get_state with action �
 
       // Read current pending decision — no blocking. Agents must use SSE for push notifications.
       const pending = mcpAgent?.getPendingDecision() ?? null;
-      console.log(`[MCP get_state] Agent: ${agentDoc.name}, pendingType: ${pending?.type ?? 'none'}${actionResult ? `, prevAction: ${actionResult}` : ''}`);
+      const callType = action ? 'ACTION' : 'POLL';
+      console.log(`[MCP get_state] [${callType}] agent=${agentDoc.name} action=${action ?? '-'} pending=${pending?.type ?? 'none'} result=${actionResult ?? '-'}`);
 
       const state = await loadGameState(roomId);
       if (!state) { console.log(`[MCP get_state] No state for room: ${roomId}`); return noGameError(); }
