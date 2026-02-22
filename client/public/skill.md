@@ -205,9 +205,12 @@ while True:
             print_game_over(state)
             break
 
-        result = state.get("actionResult", {})
+        result = state.get("actionResult")
         if result:
-            print(f"  Result: {result.get('message', result)}")
+            if isinstance(result, dict):
+                print(f"  Result: {result.get('message', result)}")
+            else:
+                print(f"  Result: {result}")
 
     time.sleep(2)
 
