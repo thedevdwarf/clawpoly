@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clawpoly — Token Economics Simulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0f1e;
+      color: #e0eaff;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: #7dd3fc;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 0.85rem;
+      margin-bottom: 40px;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 720px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: #111827;
+      border: 1px solid #1e3a5f;
+      border-radius: 16px;
+      padding: 28px;
+    }
+
+    .card h2 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #38bdf8;
+      margin-bottom: 24px;
+    }
+
+    .field {
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 8px;
+    }
+
+    .field label span {
+      color: #e0eaff;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #38bdf8;
+      height: 4px;
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      color: #e0eaff;
+      font-size: 0.95rem;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="number"]:focus {
+      border-color: #38bdf8;
+    }
+
+    .hint {
+      font-size: 0.72rem;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    /* Results */
+    .results-card {
+      grid-column: 1 / -1;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .results-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .stat {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 12px;
+      padding: 16px 20px;
+    }
+
+    .stat .label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .stat .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #7dd3fc;
+    }
+
+    .stat .sub {
+      font-size: 0.75rem;
+      color: #475569;
+      margin-top: 4px;
+    }
+
+    .stat.highlight {
+      border-color: #0ea5e9;
+      background: #0c1f35;
+    }
+
+    .stat.highlight .value {
+      color: #38bdf8;
+    }
+
+    .stat.green .value { color: #34d399; }
+    .stat.green { border-color: #064e3b; background: #022c22; }
+
+    .stat.orange .value { color: #fb923c; }
+    .stat.orange { border-color: #7c2d12; background: #1c0a00; }
+
+    .divider {
+      grid-column: 1 / -1;
+      border: none;
+      border-top: 1px solid #1e3a5f;
+      margin: 4px 0;
+    }
+
+    .section-label {
+      grid-column: 1 / -1;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #334155;
+      padding-top: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🐚 Clawpoly — Token Economics Simulator</h1>
+  <p class="subtitle">Adjust inputs to model season tokenomics in real time</p>
+
+  <div class="container">
+
+    <!-- INPUTS LEFT -->
+    <div class="card">
+      <h2>Game Parameters</h2>
+
+      <div class="field">
+        <label>Entry fee per player <span id="val-entry">$1.00</span></label>
+        <input type="range" id="entry-fee" min="0.5" max="20" step="0.5" value="1" oninput="update()" />
+        <div class="hint">USDC paid per player to join a game</div>
+      </div>
+
+      <div class="field">
+        <label>Starting tokens per player <span id="val-start-tokens">1,500</span></label>
+        <input type="range" id="start-tokens" min="500" max="5000" step="100" value="1500" oninput="update()" />
+        <div class="hint">Tokens distributed from supply at game start</div>
+      </div>
+
+      <div class="field">
+        <label>Players per game <span id="val-players">4</span></label>
+        <input type="range" id="players" min="2" max="6" step="1" value="4" oninput="update()" />
+      </div>
+
+      <div class="field">
+        <label>Total tokens at game end <span id="val-end-tokens">9,000</span></label>
+        <input type="range" id="end-tokens" min="4000" max="30000" step="500" value="9000" oninput="update()" />
+        <div class="hint">Total tokens in players' hands after game (start + bank payouts: Set Sail, cards etc.)</div>
+      </div>
+
+    </div>
+
+    <!-- INPUTS RIGHT -->
+    <div class="card">
+      <h2>Season Parameters</h2>
+
+      <div class="field">
+        <label>Season supply <span id="val-supply">1,000,000,000</span></label>
+        <input type="range" id="supply" min="100000000" max="10000000000" step="100000000" value="1000000000" oninput="update()" />
+        <div class="hint">Total tokens minted per season</div>
+      </div>
+
+      <div class="field">
+        <label>Distribution threshold <span id="val-threshold">75%</span></label>
+        <input type="range" id="threshold" min="50" max="95" step="5" value="75" oninput="update()" />
+        <div class="hint">Season ends when this % of supply is distributed</div>
+      </div>
+
+      <div class="field">
+        <label>Estimated daily games <span id="val-daily">50</span></label>
+        <input type="range" id="daily-games" min="250" max="50000" step="250" value="250" oninput="update()" />
+        <div class="hint">Used to estimate season duration</div>
+      </div>
+
+      <div class="field">
+        <label>DEX liquidity split <span id="val-liq-split">100%</span> of USDC</label>
+        <input type="range" id="liq-split" min="50" max="100" step="5" value="100" oninput="update()" />
+        <div class="hint">% of collected USDC that goes to DEX liquidity (rest = treasury)</div>
+      </div>
+
+    </div>
+
+    <!-- RESULTS -->
+    <div class="card results-card">
+      <h2>Simulation Results</h2>
+      <div class="results-grid">
+
+        <div class="section-label">Per Game</div>
+
+        <div class="stat">
+          <div class="label">USDC per game</div>
+          <div class="value" id="r-usdc-game">$4.00</div>
+          <div class="sub" id="r-usdc-game-sub">4 players × $1.00</div>
+        </div>
+
+        <div class="stat">
+          <div class="label">Tokens from supply</div>
+          <div class="value" id="r-tokens-game">9,000</div>
+          <div class="sub">Net drawn per game</div>
+        </div>
+
+        <div class="stat">
+          <div class="label">Token price at entry</div>
+          <div class="value" id="r-entry-price">$0.000667</div>
+          <div class="sub">USDC / token</div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-label">Season End</div>
+
+        <div class="stat highlight">
+          <div class="label">Games to end season</div>
+          <div class="value" id="r-games">83,333</div>
+          <div class="sub" id="r-duration">~1,667 days at 50/day</div>
+        </div>
+
+        <div class="stat highlight">
+          <div class="label">Total USDC collected</div>
+          <div class="value" id="r-total-usdc">$333,333</div>
+          <div class="sub" id="r-treasury">$0 to treasury</div>
+        </div>
+
+        <div class="stat highlight">
+          <div class="label">Tokens distributed</div>
+          <div class="value" id="r-dist-tokens">750,000,000</div>
+          <div class="sub" id="r-dist-pct">75% of supply</div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-label">DEX Liquidity Pool</div>
+
+        <div class="stat green">
+          <div class="label">Tokens to DEX</div>
+          <div class="value" id="r-dex-tokens">250,000,000</div>
+          <div class="sub" id="r-dex-tokens-pct">25% of supply</div>
+        </div>
+
+        <div class="stat green">
+          <div class="label">USDC to DEX</div>
+          <div class="value" id="r-dex-usdc">$333,333</div>
+          <div class="sub">Liquidity backing</div>
+        </div>
+
+        <div class="stat green">
+          <div class="label">Implied token price</div>
+          <div class="value" id="r-dex-price">$0.00133</div>
+          <div class="sub">at DEX listing</div>
+        </div>
+
+        <hr class="divider" />
+        <div class="section-label">Player ROI (if held to season end)</div>
+
+        <div class="stat orange">
+          <div class="label">Buy price</div>
+          <div class="value" id="r-roi-buy">$0.000667</div>
+          <div class="sub">per token at entry</div>
+        </div>
+
+        <div class="stat orange">
+          <div class="label">Listing price</div>
+          <div class="value" id="r-roi-list">$0.00133</div>
+          <div class="sub">implied at DEX</div>
+        </div>
+
+        <div class="stat orange">
+          <div class="label">Multiplier</div>
+          <div class="value" id="r-roi-mult">2.0×</div>
+          <div class="sub">on token value</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function fmt(n) {
+      if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toLocaleString();
+    }
+
+    function fmtUSD(n) {
+      if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'K';
+      return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function fmtPrice(n) {
+      if (n < 0.0001) return '$' + n.toExponential(3);
+      return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 });
+    }
+
+    function update() {
+      const entryFee    = parseFloat(document.getElementById('entry-fee').value);
+      const startTokens = parseInt(document.getElementById('start-tokens').value);
+      const players     = parseInt(document.getElementById('players').value);
+      const endTokens   = parseInt(document.getElementById('end-tokens').value);
+      const supply      = parseInt(document.getElementById('supply').value);
+      const threshold   = parseInt(document.getElementById('threshold').value) / 100;
+      const dailyGames  = parseInt(document.getElementById('daily-games').value);
+      const liqSplit    = parseInt(document.getElementById('liq-split').value) / 100;
+
+      // Update display labels
+      document.getElementById('val-entry').textContent        = '$' + entryFee.toFixed(2);
+      document.getElementById('val-start-tokens').textContent = startTokens.toLocaleString();
+      document.getElementById('val-players').textContent      = players;
+      document.getElementById('val-end-tokens').textContent   = endTokens.toLocaleString();
+      document.getElementById('val-supply').textContent       = fmt(supply);
+      document.getElementById('val-threshold').textContent    = (threshold * 100) + '%';
+      document.getElementById('val-daily').textContent        = dailyGames;
+      document.getElementById('val-liq-split').textContent    = (liqSplit * 100) + '%';
+
+      // Calculations
+      const usdcPerGame      = entryFee * players;
+      const tokensPerGame    = endTokens; // net from supply
+      const entryPricePerTok = (entryFee * players) / (startTokens * players); // USDC / token at buy
+
+      const targetTokens     = supply * threshold;
+      const gamesInSeason    = Math.floor(targetTokens / tokensPerGame);
+      const durationDays     = Math.round(gamesInSeason / dailyGames);
+      const totalUSDC        = gamesInSeason * usdcPerGame;
+      const usdcToDex        = totalUSDC * liqSplit;
+      const usdcToTreasury   = totalUSDC * (1 - liqSplit);
+
+      const dexTokens        = supply - targetTokens; // remaining % goes to DEX
+      const impliedPrice     = dexTokens > 0 ? usdcToDex / dexTokens : 0;
+      const multiplier       = entryPricePerTok > 0 ? impliedPrice / entryPricePerTok : 0;
+
+      // Render results
+      document.getElementById('r-usdc-game').textContent     = fmtUSD(usdcPerGame);
+      document.getElementById('r-usdc-game-sub').textContent = `${players} players × $${entryFee.toFixed(2)}`;
+      document.getElementById('r-tokens-game').textContent   = fmt(tokensPerGame);
+      document.getElementById('r-entry-price').textContent   = fmtPrice(entryPricePerTok);
+
+      document.getElementById('r-games').textContent         = gamesInSeason.toLocaleString();
+      document.getElementById('r-duration').textContent      = `~${durationDays.toLocaleString()} days at ${dailyGames}/day`;
+      document.getElementById('r-total-usdc').textContent    = fmtUSD(totalUSDC);
+      document.getElementById('r-treasury').textContent      = fmtUSD(usdcToTreasury) + ' to treasury';
+      document.getElementById('r-dist-tokens').textContent   = fmt(targetTokens);
+      document.getElementById('r-dist-pct').textContent      = (threshold * 100) + '% of supply';
+
+      document.getElementById('r-dex-tokens').textContent    = fmt(dexTokens);
+      document.getElementById('r-dex-tokens-pct').textContent= ((1 - threshold) * 100) + '% of supply';
+      document.getElementById('r-dex-usdc').textContent      = fmtUSD(usdcToDex);
+      document.getElementById('r-dex-price').textContent     = fmtPrice(impliedPrice);
+
+      document.getElementById('r-roi-buy').textContent       = fmtPrice(entryPricePerTok);
+      document.getElementById('r-roi-list').textContent      = fmtPrice(impliedPrice);
+      document.getElementById('r-roi-mult').textContent      = multiplier.toFixed(2) + '×';
+    }
+
+    update();
+  </script>
+
+</body>
+</html>
