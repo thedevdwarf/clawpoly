@@ -221,11 +221,13 @@
   color: $text-secondary;
 }
 
-// ─── Quick Action ─────────────────────────────────────────────────────────────
+// ─── Actions Row ─────────────────────────────────────────────────────────────
 
-.quickAction {
+.actionsRow {
   display: flex;
-  justify-content: flex-start;
+  align-items: flex-start;
+  gap: $spacing-lg;
+  flex-wrap: wrap;
 }
 
 .launchBtn {
@@ -248,6 +250,112 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+// ─── Stress Test ─────────────────────────────────────────────────────────────
+
+.stressBox {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.stressControls {
+  display: flex;
+  align-items: flex-end;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.stressField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stressLabel {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.stressInput {
+  width: 80px;
+  padding: 8px $spacing-sm;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-primary;
+  font-size: $font-size-sm;
+  outline: none;
+  text-align: center;
+
+  &:focus { border-color: $accent-teal; }
+  &:disabled { opacity: 0.5; }
+}
+
+.stressSelect {
+  padding: 8px $spacing-sm;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-primary;
+  font-size: $font-size-sm;
+  outline: none;
+  cursor: pointer;
+
+  &:focus { border-color: $accent-teal; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.stressBtn {
+  padding: 8px $spacing-lg;
+  background: rgba($warning-coral, 0.15);
+  border: 1px solid rgba($warning-coral, 0.5);
+  border-radius: $radius-md;
+  color: $warning-coral;
+  font-size: $font-size-sm;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba($warning-coral, 0.25);
+  }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.stressResult {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-xs;
+  flex-wrap: wrap;
+}
+
+.stressStarted {
+  color: $success-sea-green;
+  font-weight: 600;
+}
+
+.stressActive {
+  color: $accent-teal;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.stressDone {
+  color: $success-sea-green;
+}
+
+.stressErrors {
+  color: $warning-coral;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────

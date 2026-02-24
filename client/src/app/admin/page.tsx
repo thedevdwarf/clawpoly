@@ -66,6 +66,12 @@ interface Game {
   players: GamePlayer[];
 }
 
+interface StressResult {
+  requested: number;
+  started: number;
+  errors: string[];
+}
+
 interface GameEvent {
   _id: string;
   sequence: number;
@@ -291,6 +297,14 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
   const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
 
+  // Stress test state
+  const [stressCount, setStressCount] = useState(10);
+  const [stressSpeed, setStressSpeed] = useState('instant');
+  const [stressRunning, setStressRunning] = useState(false);
+  const [stressResult, setStressResult] = useState<StressResult | null>(null);
+  const [stressBaseGames, setStressBaseGames] = useState(0);
+  const [stressPolling, setStressPolling] = useState(false);
+
   const headers = authHeaders(token);
 
   const fetchAll = useCallback(async () => {
@@ -356,6 +370,48 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
     } finally { setActionLoading(null); }
   }
 
+  async function runStressTest() {
+    setStressRunning(true);
+    setStressResult(null);
+
+    // Snapshot current game count as baseline
+    const baseRes = await fetch(`${API}/admin/stats`, { headers });
+    const baseStats = baseRes.ok ? await baseRes.json() : null;
+    setStressBaseGames(baseStats?.totalGames ?? 0);
+
+    try {
+      const res = await fetch(`${API}/admin/stress-test`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ count: stressCount, speed: stressSpeed }),
+      });
+      const data = await res.json();
+      setStressResult(data);
+      setStressPolling(true);
+      await fetchAll();
+    } finally {
+      setStressRunning(false);
+    }
+  }
+
+  // Poll stats while stress test is running
+  useEffect(() => {
+    if (!stressPolling) return;
+    const interval = setInterval(async () => {
+      const res = await fetch(`${API}/admin/stats`, { headers });
+      if (res.ok) {
+        const s = await res.json();
+        setStats(s);
+        if (s.activeRooms === 0) {
+          setStressPolling(false);
+          clearInterval(interval);
+          fetchAll();
+        }
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [stressPolling]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function deleteRoom(roomId: string) {
     setActionLoading(`del-${roomId}`);
     try {
@@ -402,11 +458,69 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
           </div>
         </div>
 
-        {/* Quick Action */}
-        <div className={styles.quickAction}>
+        {/* Actions Row */}
+        <div className={styles.actionsRow}>
+          {/* Single Game */}
           <button className={styles.launchBtn} onClick={launchGame} disabled={actionLoading === 'launch'}>
             {actionLoading === 'launch' ? '⏳ Launching…' : '🚀 Launch New Game (4 bots)'}
           </button>
+
+          {/* Stress Test */}
+          <div className={styles.stressBox}>
+            <div className={styles.stressControls}>
+              <div className={styles.stressField}>
+                <label className={styles.stressLabel}>Games</label>
+                <input
+                  type="number"
+                  className={styles.stressInput}
+                  min={1} max={200}
+                  value={stressCount}
+                  onChange={(e) => setStressCount(Math.min(200, Math.max(1, parseInt(e.target.value) || 1)))}
+                  disabled={stressRunning}
+                />
+              </div>
+              <div className={styles.stressField}>
+                <label className={styles.stressLabel}>Speed</label>
+                <select
+                  className={styles.stressSelect}
+                  value={stressSpeed}
+                  onChange={(e) => setStressSpeed(e.target.value)}
+                  disabled={stressRunning}
+                >
+                  <option value="instant">Instant</option>
+                  <option value="fast">Fast</option>
+                  <option value="normal">Normal</option>
+                  <option value="slow">Slow</option>
+                </select>
+              </div>
+              <button
+                className={styles.stressBtn}
+                onClick={runStressTest}
+                disabled={stressRunning}
+              >
+                {stressRunning ? '⏳ Launching…' : '⚡ Stress Test'}
+              </button>
+            </div>
+
+            {/* Result / Progress */}
+            {stressResult && (
+              <div className={styles.stressResult}>
+                <span className={styles.stressStarted}>✓ {stressResult.started} games started</span>
+                {stressPolling && (
+                  <span className={styles.stressActive}>
+                    · {stats?.activeRooms ?? '?'} active
+                    · {Math.max(0, (stats?.totalGames ?? 0) - stressBaseGames)} finished
+                  </span>
+                )}
+                {!stressPolling && stressResult.started > 0 && (
+                  <span className={styles.stressDone}>· All done ✓</span>
+                )}
+                {stressResult.errors.length > 0 && (
+                  <span className={styles.stressErrors}>· {stressResult.errors.length} error(s)</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Tabs */}

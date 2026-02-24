@@ -195,4 +195,71 @@ router.get('/agents', adminAuth, async (req, res) => {
   }
 });
 
+// POST /api/v1/admin/stress-test
+router.post('/stress-test', adminAuth, async (req, res) => {
+  const { count = 5, speed = 'instant' } = req.body;
+  const total = Math.min(Math.max(1, parseInt(count)), 200);
+
+  const ALL_TOKENS: Array<'lobster' | 'crab' | 'octopus' | 'seahorse' | 'dolphin' | 'shark'> =
+    ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'];
+  const BOT_NAMES = ['Reef Bot', 'Abyss Bot', 'Tidal Bot', 'Ocean Bot'];
+
+  let started = 0;
+  const errors: string[] = [];
+
+  const launchOne = async (i: number) => {
+    try {
+      const room = await roomManager.createRoom(`Stress #${i + 1}`, {
+        maxPlayers: 4,
+        turnLimit: 200,
+        gameSpeed: speed,
+      });
+
+      const state = await loadGameState(room.roomId);
+      if (!state) return;
+
+      const usedTokens = new Set<string>();
+      for (let j = 0; j < 4; j++) {
+        const token = ALL_TOKENS.find((t) => !usedTokens.has(t))!;
+        const playerId = uuidv4();
+        state.players.push({
+          id: playerId,
+          name: `${BOT_NAMES[j]} ${Math.floor(Math.random() * 1000)}`,
+          token,
+          color: TOKEN_COLORS[token],
+          money: 1500,
+          position: 0,
+          properties: [],
+          inLobsterPot: false,
+          lobsterPotTurns: 0,
+          escapeCards: [],
+          isBankrupt: false,
+          connected: true,
+          consecutiveTimeouts: 0,
+        });
+        registerAgent(room.roomId, playerId, new RandomAgent());
+        usedTokens.add(token);
+      }
+
+      await saveGameState(room.roomId, state);
+      await roomManager.startGame(room.roomId);
+      started++;
+    } catch (err: any) {
+      errors.push(err.message);
+    }
+  };
+
+  // Launch in batches of 10 to avoid overwhelming the event loop
+  const batchSize = 10;
+  for (let i = 0; i < total; i += batchSize) {
+    const batch = [];
+    for (let j = i; j < Math.min(i + batchSize, total); j++) {
+      batch.push(launchOne(j));
+    }
+    await Promise.all(batch);
+  }
+
+  res.json({ requested: total, started, errors: errors.slice(0, 10) });
+});
+
 export default router;
