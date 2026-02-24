@@ -471,3 +471,161 @@
   padding: $spacing-xxl;
   font-size: $font-size-sm;
 }
+
+// ─── Games Tab ────────────────────────────────────────────────────────────────
+
+.winner {
+  color: $shell-gold;
+  font-weight: 600;
+}
+
+.playerTokens {
+  display: flex;
+  gap: 2px;
+}
+
+.tokenBadge {
+  font-size: 1.1rem;
+
+  &.tokenBankrupt {
+    opacity: 0.35;
+    filter: grayscale(1);
+  }
+}
+
+.standings {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  padding: $spacing-md 0;
+  border-bottom: 1px solid rgba($text-primary, 0.08);
+  margin-bottom: $spacing-md;
+}
+
+.standingRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  font-size: $font-size-sm;
+  padding: 4px $spacing-sm;
+  border-radius: $radius-sm;
+
+  &.standingFirst {
+    background: rgba($shell-gold, 0.08);
+    border: 1px solid rgba($shell-gold, 0.2);
+  }
+}
+
+.placement {
+  color: $text-secondary;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  width: 24px;
+}
+
+.standingName {
+  flex: 1;
+  color: $text-primary;
+}
+
+// ─── Event Log ────────────────────────────────────────────────────────────────
+
+.logPanel {
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($accent-teal, 0.1);
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid rgba($text-primary, 0.08);
+  background: rgba($surface, 0.5);
+}
+
+.logTitle {
+  font-size: $font-size-sm;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.logMeta {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+}
+
+.logLoading {
+  padding: $spacing-xl;
+  text-align: center;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+}
+
+.logList {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: $spacing-xs 0;
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba($accent-teal, 0.3); border-radius: 2px; }
+}
+
+.logEntry {
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+  padding: 4px $spacing-md;
+  font-size: $font-size-xs;
+  border-bottom: 1px solid rgba($text-primary, 0.04);
+  flex-wrap: wrap;
+
+  &:hover {
+    background: rgba($surface, 0.4);
+  }
+}
+
+.logSeq {
+  color: rgba($text-secondary, 0.5);
+  font-family: monospace;
+  min-width: 36px;
+}
+
+.logTurn {
+  color: rgba($accent-teal, 0.6);
+  font-family: monospace;
+  min-width: 28px;
+}
+
+.logType {
+  color: $text-primary;
+  font-weight: 600;
+  min-width: 160px;
+}
+
+.logPlayer {
+  color: $accent-teal;
+  font-weight: 500;
+}
+
+.logDesc {
+  color: $text-secondary;
+  flex: 1;
+}
+
+.logPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  border-top: 1px solid rgba($text-primary, 0.08);
+}
+
+.logPage {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+}
