@@ -1,0 +1,473 @@
+@use '@/styles/variables' as *;
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+
+.loginWrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-xl $spacing-md;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+  background: rgba($surface, 0.9);
+  border: 1px solid rgba($accent-teal, 0.2);
+  border-radius: $radius-xl;
+  padding: $spacing-xxl $spacing-xl;
+  text-align: center;
+  backdrop-filter: blur(12px);
+}
+
+.loginIcon {
+  font-size: 3.5rem;
+  margin-bottom: $spacing-md;
+}
+
+.loginTitle {
+  font-size: $font-size-xl;
+  font-weight: 800;
+  color: $text-primary;
+  margin-bottom: $spacing-xs;
+}
+
+.loginSub {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  margin-bottom: $spacing-xl;
+}
+
+.loginForm {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.input {
+  padding: $spacing-md;
+  background: $bg-deep-ocean;
+  border: 1px solid rgba($text-primary, 0.15);
+  border-radius: $radius-md;
+  color: $text-primary;
+  font-size: $font-size-md;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus {
+    border-color: $accent-teal;
+  }
+
+  &::placeholder {
+    color: $text-secondary;
+  }
+}
+
+.error {
+  font-size: $font-size-sm;
+  color: $warning-coral;
+  text-align: left;
+}
+
+.loginBtn {
+  margin-top: $spacing-sm;
+  padding: $spacing-md;
+  background: $accent-teal;
+  color: $bg-deep-ocean;
+  font-size: $font-size-md;
+  font-weight: 700;
+  border-radius: $radius-md;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+
+.dash {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md $spacing-xl;
+  background: rgba($surface, 0.95);
+  border-bottom: 1px solid rgba($accent-teal, 0.15);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.headerIcon {
+  font-size: 1.5rem;
+}
+
+.headerTitle {
+  font-size: $font-size-lg;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.headerRight {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.refreshBtn {
+  padding: $spacing-xs $spacing-md;
+  background: transparent;
+  border: 1px solid rgba($accent-teal, 0.4);
+  border-radius: $radius-md;
+  color: $accent-teal;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: rgba($accent-teal, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.logoutBtn {
+  padding: $spacing-xs $spacing-md;
+  background: transparent;
+  border: 1px solid rgba($warning-coral, 0.4);
+  border-radius: $radius-md;
+  color: $warning-coral;
+  font-size: $font-size-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba($warning-coral, 0.1);
+  }
+}
+
+.content {
+  padding: $spacing-xl;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xl;
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-md;
+
+  @media (max-width: $breakpoint-md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.statCard {
+  background: rgba($surface, 0.8);
+  border: 1px solid rgba($accent-teal, 0.15);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  text-align: center;
+
+  &.statGreen {
+    border-color: rgba($success-sea-green, 0.3);
+
+    .statValue {
+      color: $success-sea-green;
+    }
+  }
+}
+
+.statValue {
+  font-size: 2rem;
+  font-weight: 800;
+  color: $accent-teal;
+  line-height: 1;
+  margin-bottom: $spacing-xs;
+}
+
+.statLabel {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+
+// ─── Quick Action ─────────────────────────────────────────────────────────────
+
+.quickAction {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.launchBtn {
+  padding: $spacing-md $spacing-xl;
+  background: $accent-teal;
+  color: $bg-deep-ocean;
+  font-size: $font-size-md;
+  font-weight: 700;
+  border-radius: $radius-lg;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+
+.tabs {
+  display: flex;
+  gap: $spacing-xs;
+  border-bottom: 1px solid rgba($text-primary, 0.1);
+}
+
+.tab {
+  padding: $spacing-sm $spacing-lg;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+
+  &:hover {
+    color: $text-primary;
+  }
+
+  &.tabActive {
+    color: $accent-teal;
+    border-bottom-color: $accent-teal;
+  }
+}
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-size-sm;
+
+  th {
+    text-align: left;
+    padding: $spacing-sm $spacing-md;
+    color: $text-secondary;
+    font-weight: 600;
+    font-size: $font-size-xs;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1px solid rgba($text-primary, 0.1);
+  }
+
+  td {
+    padding: $spacing-sm $spacing-md;
+    color: $text-primary;
+    border-bottom: 1px solid rgba($text-primary, 0.06);
+    vertical-align: middle;
+  }
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba($surface-hover, 0.5);
+  }
+
+  &.rowExpanded {
+    background: rgba($surface-hover, 0.4);
+  }
+}
+
+.expandedRow {
+  td {
+    padding: 0 $spacing-md $spacing-md;
+    border-bottom: 1px solid rgba($text-primary, 0.06);
+  }
+}
+
+.playerList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  padding-top: $spacing-sm;
+}
+
+.playerChip {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  background: rgba($surface, 0.8);
+  border: 1px solid rgba($accent-teal, 0.2);
+  border-radius: $radius-lg;
+  padding: $spacing-xs $spacing-md;
+  font-size: $font-size-sm;
+
+  &.bankrupt {
+    opacity: 0.5;
+    border-color: rgba($warning-coral, 0.3);
+  }
+}
+
+.money {
+  color: $shell-gold;
+  font-weight: 600;
+}
+
+.bankruptLabel {
+  font-size: $font-size-xs;
+  color: $warning-coral;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.code {
+  background: rgba($accent-teal, 0.1);
+  color: $accent-teal;
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  font-family: monospace;
+  font-size: $font-size-sm;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: $radius-lg;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: rgba($text-secondary, 0.15);
+  color: $text-secondary;
+
+  &.badge_playing {
+    background: rgba($success-sea-green, 0.15);
+    color: $success-sea-green;
+  }
+
+  &.badge_waiting {
+    background: rgba($shell-gold, 0.15);
+    color: $shell-gold;
+  }
+
+  &.badge_finished {
+    background: rgba($text-secondary, 0.1);
+    color: $text-secondary;
+  }
+}
+
+.elo {
+  color: $accent-teal;
+  font-weight: 700;
+}
+
+.dateCell {
+  color: $text-secondary;
+  font-size: $font-size-xs;
+}
+
+.actions {
+  display: flex;
+  gap: $spacing-xs;
+  flex-wrap: nowrap;
+}
+
+.btnPrimary {
+  padding: 4px 10px;
+  background: $accent-teal;
+  color: $bg-deep-ocean;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  border-radius: $radius-sm;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.btnSecondary {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid rgba($accent-teal, 0.5);
+  color: $accent-teal;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+
+  &:hover:not(:disabled) { background: rgba($accent-teal, 0.1); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.btnDanger {
+  padding: 4px 8px;
+  background: transparent;
+  border: 1px solid rgba($warning-coral, 0.4);
+  color: $warning-coral;
+  font-size: $font-size-xs;
+  font-weight: 700;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) { background: rgba($warning-coral, 0.1); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.empty {
+  text-align: center;
+  color: $text-secondary;
+  padding: $spacing-xxl;
+  font-size: $font-size-sm;
+}

@@ -11,6 +11,7 @@ import roomsRouter from './routes/rooms';
 import gamesRouter from './routes/games';
 import agentsRouter from './routes/agents';
 import wishlistRouter from './routes/wishlist';
+import adminRouter from './routes/admin';
 
 const app = express();
 const server = http.createServer(app);
@@ -34,6 +35,7 @@ app.use('/api/v1/rooms', roomsRouter);
 app.use('/api/v1/games', gamesRouter);
 app.use('/api/v1/agents', agentsRouter);
 app.use('/api/v1/wishlist', wishlistRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // MCP endpoint (Streamable HTTP)
 app.post('/mcp', (req, res) => handleMcpPost(req, res, req.body));
