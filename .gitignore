@@ -31,3 +31,4 @@ yarn-error.log*
 
 # Misc
 *.log
+docs/BASE-BATCHES.md
