@@ -12,6 +12,7 @@ export const config = {
   roomAbandonTimeoutMs: parseInt(process.env.ROOM_ABANDON_TIMEOUT_MS || '900000', 10),
   logLevel: process.env.LOG_LEVEL || 'info',
   nodeEnv: process.env.NODE_ENV || 'development',
+  bankrPartnerApiKey: process.env.BANKR_PARTNER_API_KEY || '',
 };
 
 export const SPEED_DELAYS: Record<string, number> = {

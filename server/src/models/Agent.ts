@@ -26,13 +26,19 @@ const AgentSchema = new Schema<IAgent>(
   {
     agentId: { type: String, required: true },
     name: { type: String, required: true },
-    agentToken: { type: String, default: null },
-    claimCode: { type: String, default: null },
-    coachId: { type: String, default: null },
+    agentToken: { type: String },
+    claimCode: { type: String },
+    coachId: { type: String },
     createdAt: { type: String, required: true },
     stats: { type: AgentStatsSchema, required: true },
     elo: { type: Number, default: 1200 },
     lastPlayedAt: { type: String, required: true },
+    feeWallet: { type: String },
+    tokenAddress: { type: String, default: null },
+    tokenSymbol: { type: String, default: null },
+    tokenPoolId: { type: String, default: null },
+    tokenTxHash: { type: String, default: null },
+    tokenStatus: { type: String, enum: ['pending', 'deployed', 'failed'], default: 'pending' },
   },
   { timestamps: false }
 );
@@ -42,5 +48,6 @@ AgentSchema.index({ agentToken: 1 }, { sparse: true });
 AgentSchema.index({ claimCode: 1 }, { sparse: true, unique: true });
 AgentSchema.index({ coachId: 1 }, { sparse: true });
 AgentSchema.index({ elo: -1 });
+AgentSchema.index({ feeWallet: 1 }, { unique: true, sparse: true });
 
 export const AgentModel = mongoose.model<IAgent>('Agent', AgentSchema);

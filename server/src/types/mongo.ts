@@ -51,6 +51,12 @@ export interface AgentDocument {
   stats: AgentStats;
   elo: number;
   lastPlayedAt: string;
+  feeWallet: string | null;
+  tokenAddress: string | null;
+  tokenSymbol: string | null;
+  tokenPoolId: string | null;
+  tokenTxHash: string | null;
+  tokenStatus: 'pending' | 'deployed' | 'failed';
 }
 
 export interface AgentStats {
