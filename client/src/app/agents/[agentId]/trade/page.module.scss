@@ -1,0 +1,721 @@
+@use '@/styles/variables' as *;
+
+// =============================================
+// Agent Trade Page
+// =============================================
+
+.page {
+  min-height: 100vh;
+  background: $bg-deep-ocean;
+  position: relative;
+  overflow: hidden;
+}
+
+.ambientGlow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+// =============================================
+// Layout — 3 column
+// =============================================
+
+.layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  height: 100vh;
+  overflow: hidden;
+
+  @media (max-width: 1200px) {
+    grid-template-columns: 240px 1fr 280px;
+  }
+
+  @media (max-width: $breakpoint-md) {
+    grid-template-columns: 1fr;
+    height: auto;
+    overflow: auto;
+  }
+}
+
+// =============================================
+// Left Sidebar
+// =============================================
+
+.sidebar {
+  border-right: 1px solid rgba($accent-teal, 0.1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: rgba($surface, 0.3);
+  backdrop-filter: blur(12px);
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { background: rgba($accent-teal, 0.2); border-radius: 2px; }
+}
+
+// Agent card
+
+.agentCard {
+  position: relative;
+  padding: 24px 20px;
+  border-bottom: 1px solid rgba($accent-teal, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.agentCardGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.backBtn {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid rgba($accent-teal, 0.2);
+  color: $text-secondary;
+  padding: 5px 10px;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.2s;
+  margin-bottom: 4px;
+
+  &:hover {
+    color: $accent-teal;
+    border-color: rgba($accent-teal, 0.5);
+  }
+}
+
+.agentTokenWrap {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+}
+
+.agentTokenEmoji { line-height: 1; }
+
+.agentName {
+  font-size: $font-size-lg;
+  font-weight: 800;
+  color: $text-primary;
+}
+
+.agentTicker {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.rankBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba($surface-hover, 0.6);
+  border: 1px solid rgba($accent-teal, 0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+
+.rankNum {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: $shell-gold;
+}
+
+.rankLabel {
+  font-size: 0.65rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rankElo {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: $accent-teal;
+}
+
+.agentDesc {
+  font-size: 0.72rem;
+  color: $text-secondary;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.agentStats {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.agentStat {
+  background: rgba($surface-hover, 0.4);
+  border-radius: $radius-sm;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.agentStatLabel {
+  font-size: 0.6rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agentStatValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+// Token stats list
+
+.tokenStats {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tokenStatRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba($accent-teal, 0.06);
+
+  &:last-child { border-bottom: none; }
+}
+
+.tokenStatLabel {
+  font-size: 0.7rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tokenStatValue {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: $text-primary;
+  font-variant-numeric: tabular-nums;
+}
+
+// =============================================
+// Chart Area
+// =============================================
+
+.chartArea {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid rgba($accent-teal, 0.1);
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba($accent-teal, 0.1);
+  background: rgba($surface, 0.4);
+  backdrop-filter: blur(10px);
+  flex-shrink: 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chartHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chartTokenIcon {
+  font-size: 1.8rem;
+}
+
+.chartSymbol {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: $text-primary;
+  display: block;
+}
+
+.chartPair {
+  font-size: 0.65rem;
+  color: $text-secondary;
+  display: block;
+  margin-top: 1px;
+}
+
+.chartPrice {
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.chartChange {
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: $radius-sm;
+
+  &.up   { background: rgba(46,204,113,0.1); }
+  &.down { background: rgba(231,76,60,0.1); }
+}
+
+.chartHeaderRight {
+  display: flex;
+  gap: 8px;
+}
+
+.chartBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba($accent-teal, 0.3);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: $accent-teal;
+}
+
+.chartBadgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: $accent-teal;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+// TradingView container
+
+.tvWrapper {
+  flex: 1;
+  min-height: 0;
+  background: rgba($bg-deep-ocean, 0.6);
+  overflow: hidden;
+}
+
+// Recent trades
+
+.recentTrades {
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border-top: 1px solid rgba($accent-teal, 0.1);
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba($accent-teal, 0.2); border-radius: 2px; }
+}
+
+.recentTradesHeader {
+  padding: 10px 16px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: rgba($surface, 0.4);
+}
+
+.recentTradesGrid {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 100px 70px;
+  padding: 4px 16px;
+  gap: 8px;
+}
+
+.recentTradesCol {
+  font-size: 0.62rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recentTradeRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 100px 100px 70px;
+  padding: 7px 16px;
+  gap: 8px;
+  border-top: 1px solid rgba($accent-teal, 0.04);
+  align-items: center;
+
+  &:hover { background: rgba($surface-hover, 0.3); }
+}
+
+.tradeType {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.tradeAmount, .tradePrice, .tradeWallet, .tradeTime {
+  font-size: 0.72rem;
+  color: $text-secondary;
+  font-variant-numeric: tabular-nums;
+}
+
+// =============================================
+// Trade Panel (Right)
+// =============================================
+
+.tradePanel {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: rgba($surface, 0.25);
+  backdrop-filter: blur(12px);
+
+  &::-webkit-scrollbar { width: 4px; }
+  &::-webkit-scrollbar-thumb { background: rgba($accent-teal, 0.2); border-radius: 2px; }
+}
+
+.tradePanelInner {
+  padding: 20px;
+  border-bottom: 1px solid rgba($accent-teal, 0.1);
+  border: 1px solid transparent;
+  margin: 16px 16px 0;
+  border-radius: $radius-xl;
+  background: rgba($surface, 0.5);
+}
+
+// Tabs
+
+.tradeTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.tradeTab {
+  padding: 10px;
+  border-radius: $radius-md;
+  border: 1px solid rgba($text-secondary, 0.2);
+  background: transparent;
+  color: $text-secondary;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+
+  &:hover { background: rgba($surface-hover, 0.5); }
+}
+
+.tradeTabActive {
+  font-weight: 800;
+}
+
+// Balance
+
+.balanceRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.balanceLabel {
+  font-size: 0.7rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.balanceValue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+// Input group
+
+.inputGroup {
+  margin-bottom: 14px;
+}
+
+.inputLabel {
+  display: block;
+  font-size: 0.68rem;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  background: rgba($bg-deep-ocean, 0.6);
+  border: 1px solid rgba($accent-teal, 0.2);
+  border-radius: $radius-md;
+  overflow: hidden;
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: rgba($accent-teal, 0.5);
+  }
+}
+
+.tradeInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: $text-primary;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 12px;
+  font-variant-numeric: tabular-nums;
+
+  &::placeholder { color: rgba($text-secondary, 0.4); }
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button { -webkit-appearance: none; }
+}
+
+.maxBtn {
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba($accent-teal, 0.15);
+  color: $accent-teal;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  height: 100%;
+  letter-spacing: 0.5px;
+  transition: background 0.2s;
+
+  &:hover { background: rgba($accent-teal, 0.1); }
+}
+
+// Quick amounts
+
+.quickAmounts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.quickBtn {
+  padding: 6px 4px;
+  background: rgba($surface-hover, 0.4);
+  border: 1px solid rgba($accent-teal, 0.12);
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+
+  &:hover {
+    color: $accent-teal;
+    border-color: rgba($accent-teal, 0.4);
+    background: rgba($accent-teal, 0.08);
+  }
+}
+
+// Slippage
+
+.slippageRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.slipBtn {
+  padding: 6px 10px;
+  background: rgba($surface-hover, 0.4);
+  border: 1px solid rgba($text-secondary, 0.15);
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { background: rgba($surface-hover, 0.8); }
+}
+
+.slipBtnActive {
+  font-weight: 800;
+}
+
+.slipInput {
+  flex: 1;
+  background: rgba($bg-deep-ocean, 0.6);
+  border: 1px solid rgba($accent-teal, 0.2);
+  border-radius: $radius-sm;
+  color: $text-primary;
+  font-size: 0.72rem;
+  padding: 6px 8px;
+  outline: none;
+  min-width: 0;
+
+  &::placeholder { color: rgba($text-secondary, 0.4); }
+}
+
+// Summary
+
+.tradeSummary {
+  background: rgba($bg-deep-ocean, 0.4);
+  border: 1px solid rgba($accent-teal, 0.1);
+  border-radius: $radius-md;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: $text-secondary;
+
+  span:last-child {
+    font-weight: 600;
+    color: $text-primary;
+  }
+}
+
+.summaryTotal {
+  padding-top: 8px;
+  border-top: 1px solid rgba($accent-teal, 0.1);
+  font-size: 0.8rem !important;
+  font-weight: 700;
+
+  span:first-child { color: $text-primary; }
+  span:last-child { font-size: 0.85rem !important; font-weight: 800 !important; }
+}
+
+// CTA button
+
+.tradeSubmitBtn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: $radius-lg;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: 0.5px;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tradePowered {
+  text-align: center;
+  font-size: 0.62rem;
+  color: rgba($text-secondary, 0.5);
+  margin-top: 10px;
+
+  span { color: rgba($accent-teal, 0.7); font-weight: 700; }
+}
+
+// =============================================
+// Holders
+// =============================================
+
+.holdersCard {
+  margin: 12px 16px 16px;
+  background: rgba($surface, 0.5);
+  border: 1px solid rgba($accent-teal, 0.1);
+  border-radius: $radius-xl;
+  padding: 16px;
+}
+
+.holdersTitle {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: $text-secondary;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+}
+
+.holderRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.holderWallet {
+  font-size: 0.68rem;
+  color: $text-secondary;
+  font-variant-numeric: tabular-nums;
+}
+
+.holderBarWrap {
+  height: 4px;
+  background: rgba($text-secondary, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.holderBar {
+  height: 100%;
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+.holderPct {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: $text-secondary;
+  text-align: right;
+}
+
+// =============================================
+// Shared colors
+// =============================================
+
+.up   { color: #2ecc71; }
+.down { color: $warning-coral; }

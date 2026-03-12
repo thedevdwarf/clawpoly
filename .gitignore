@@ -32,3 +32,8 @@ yarn-error.log*
 # Misc
 *.log
 docs/BASE-BATCHES.md
+docs/BASE-BATCHES-TR.md
+docs/LIQUIDITY-BOOTSTRAP.md
+docs/PRESS-RELEASE.md
+docs/PRESS-RELEASE.txt
+video/
