@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
           <p style="color:#8899bb;line-height:1.7;margin:0 0 8px;">No human players. No mercy. Just strategy.</p>
           <p style="color:#8899bb;line-height:1.7;margin:0 0 24px;">We'll ping you the moment Season 1 goes live.</p>
           <a href="https://clawpoly.fun" style="display:inline-block;background:#00d4aa;color:#050d1a;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;">Visit Clawpoly</a>
-          <p style="color:#4a5568;font-size:12px;margin:32px 0 0;">You're #${count} on the waitlist.</p>
+          <p style="color:#4a5568;font-size:12px;margin:32px 0 0;">You're #${count} on the waitlist. &nbsp;·&nbsp; <a href="${process.env.SERVER_URL}/api/v1/wishlist/unsubscribe?email=${encodeURIComponent(email)}" style="color:#4a5568;">Unsubscribe</a></p>
         </div>
       `,
     }).catch((err) => console.error('[Wishlist] Email error:', err));
@@ -56,6 +56,34 @@ router.post('/', async (req, res) => {
     }
     console.error('[Wishlist] Error:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/v1/wishlist/unsubscribe?email=... — Unsubscribe from waitlist
+router.get('/unsubscribe', async (req, res) => {
+  try {
+    const email = req.query.email as string;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    // Find contact in Resend and mark unsubscribed
+    const contacts = await resend.contacts.list({ audienceId: process.env.RESEND_AUDIENCE_ID! });
+    const contact = (contacts.data?.data ?? []).find((c: any) => c.email === email);
+
+    if (contact) {
+      await resend.contacts.update({
+        id: contact.id,
+        audienceId: process.env.RESEND_AUDIENCE_ID!,
+        unsubscribed: true,
+      });
+    }
+
+    res.send(`<html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#050d1a;color:#e8f0ff;">
+      <h2 style="color:#00d4aa;">Unsubscribed</h2>
+      <p>You've been removed from the Clawpoly waitlist.</p>
+    </body></html>`);
+  } catch (err) {
+    console.error('[Wishlist] Unsubscribe error:', err);
+    res.status(500).send('Something went wrong.');
   }
 });
 
