@@ -130,6 +130,28 @@
   color: $text-primary;
 }
 
+.headerNav {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-left: $spacing-lg;
+}
+
+.navLink {
+  padding: $spacing-xs $spacing-sm;
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s, background 0.2s;
+
+  &:hover {
+    color: $text-primary;
+    background: rgba($text-primary, 0.06);
+  }
+}
+
 .headerRight {
   display: flex;
   gap: $spacing-sm;
@@ -204,6 +226,14 @@
 
     .statValue {
       color: $success-sea-green;
+    }
+  }
+
+  &.statBlue {
+    border-color: rgba($shell-gold, 0.3);
+
+    .statValue {
+      color: $shell-gold;
     }
   }
 }
@@ -580,6 +610,19 @@
   font-size: $font-size-sm;
 }
 
+.sentinel {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loadingMore,
+.allLoaded {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+
 // ─── Games Tab ────────────────────────────────────────────────────────────────
 
 .winner {
@@ -736,4 +779,155 @@
 .logPage {
   font-size: $font-size-xs;
   color: $text-secondary;
+}
+
+// =============================================
+// Purge
+// =============================================
+
+.purgeRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.purgeBtn {
+  padding: $spacing-sm $spacing-md;
+  background: rgba($warning-coral, 0.12);
+  border: 1px solid rgba($warning-coral, 0.4);
+  border-radius: $radius-sm;
+  color: $warning-coral;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background: rgba($warning-coral, 0.22);
+    border-color: $warning-coral;
+  }
+}
+
+.purgeSuccess {
+  font-size: $font-size-sm;
+  color: $success-sea-green;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalCard {
+  background: $surface;
+  border: 1px solid rgba($warning-coral, 0.4);
+  border-radius: $radius-lg;
+  padding: $spacing-xl;
+  width: 420px;
+  max-width: 90vw;
+}
+
+.modalIcon {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: $spacing-sm;
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: 700;
+  color: $warning-coral;
+  text-align: center;
+  margin-bottom: $spacing-md;
+}
+
+.modalDesc {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  margin-bottom: $spacing-xs;
+}
+
+.modalList {
+  margin: 0 0 $spacing-md $spacing-md;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  line-height: 1.8;
+}
+
+.modalWarn {
+  font-size: $font-size-sm;
+  color: $warning-coral;
+  margin-bottom: $spacing-md;
+
+  strong {
+    font-family: monospace;
+    letter-spacing: 0.05em;
+  }
+}
+
+.modalInput {
+  width: 100%;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba($warning-coral, 0.3);
+  border-radius: $radius-sm;
+  color: $text-primary;
+  font-size: $font-size-sm;
+  font-family: monospace;
+  letter-spacing: 0.05em;
+  margin-bottom: $spacing-md;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: $warning-coral;
+  }
+}
+
+.modalActions {
+  display: flex;
+  gap: $spacing-sm;
+  justify-content: flex-end;
+}
+
+.modalCancel {
+  padding: $spacing-sm $spacing-md;
+  background: transparent;
+  border: 1px solid rgba($text-secondary, 0.3);
+  border-radius: $radius-sm;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  &:hover {
+    border-color: $text-secondary;
+    color: $text-primary;
+  }
+}
+
+.modalConfirm {
+  padding: $spacing-sm $spacing-md;
+  background: $warning-coral;
+  border: none;
+  border-radius: $radius-sm;
+  color: #fff;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    opacity: 0.85;
+  }
 }

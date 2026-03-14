@@ -482,3 +482,50 @@
   background: rgba($accent-teal, 0.15);
   flex-shrink: 0;
 }
+
+// =============================================
+// Loading / Error / Empty states
+// =============================================
+
+.loadingState,
+.errorState,
+.emptyState {
+  text-align: center;
+  padding: 80px 24px;
+  color: $text-secondary;
+  font-size: 1rem;
+}
+
+.errorState {
+  color: #e74c3c;
+}
+
+// =============================================
+// Token status badges
+// =============================================
+
+.deployedBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(#2ecc71, 0.15);
+  color: #2ecc71;
+  border: 1px solid rgba(#2ecc71, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pendingBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(#f39c12, 0.15);
+  color: #f39c12;
+  border: 1px solid rgba(#f39c12, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

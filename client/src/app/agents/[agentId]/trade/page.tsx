@@ -1,439 +1,536 @@
 'use client';
 
-import { useEffect, useRef, useState, use } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+  useAccount, useConnect, useDisconnect, useSwitchChain,
+  useSendTransaction, useWaitForTransactionReceipt,
+  useReadContract, useWriteContract, usePublicClient,
+} from 'wagmi';
+import { injected } from 'wagmi/connectors';
+import { parseEther, parseUnits, formatUnits, formatEther, erc20Abi, maxUint256, encodeFunctionData } from 'viem';
+import { base } from 'wagmi/chains';
+import { getAddresses, DYNAMIC_FEE_FLAG, Quoter } from '@whetstone-research/doppler-sdk';
+import { CommandBuilder, V4ActionBuilder, V4ActionType } from 'doppler-router';
 import styles from './page.module.scss';
 
-// ─── Mock agent data ──────────────────────────────────────────────────────────
+const API = process.env.NEXT_PUBLIC_LOCAL === 'true'
+  ? process.env.NEXT_PUBLIC_LOCAL_API_URL
+  : process.env.NEXT_PUBLIC_API_URL;
 
+// WETH on Base
+const WETH = '0x4200000000000000000000000000000000000006' as const;
+
+const UNIVERSAL_ROUTER_ABI = [{
+  type: 'function', name: 'execute', stateMutability: 'payable',
+  inputs: [{ name: 'commands', type: 'bytes' }, { name: 'inputs', type: 'bytes[]' }],
+  outputs: [],
+}] as const;
+
+function slippageMin(amount: bigint, pct: string) {
+  const s = parseFloat(pct) || 1;
+  return amount * BigInt(Math.floor((100 - s) * 100)) / 10000n;
+}
+
+// ─── Token / theme ─────────────────────────────────────────────────────────────
+const TOKEN_TYPES = ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'] as const;
 const TOKEN_EMOJI: Record<string, string> = {
-  shark: '🦈', octopus: '🐙', lobster: '🦞',
-  dolphin: '🐬', crab: '🦀', seahorse: '🐴',
+  shark: '🦈', octopus: '🐙', lobster: '🦞', dolphin: '🐬', crab: '🦀', seahorse: '🐴',
 };
 const TOKEN_COLOR: Record<string, string> = {
   shark: '#95a5a6', octopus: '#9b59b6', lobster: '#e74c3c',
   dolphin: '#3498db', crab: '#e67e22', seahorse: '#2ecc71',
 };
-const TICKER_MAP: Record<string, string> = {
-  shark: 'SHRK', octopus: 'OCTO', lobster: 'CLWZ',
-  dolphin: 'DLPN', crab: 'CRAB', seahorse: 'SEAH',
-};
-const TV_SYMBOL_MAP: Record<string, string> = {
-  'agent-001': 'BINANCE:SOLUSDT',
-  'agent-002': 'BINANCE:ETHUSDT',
-  'agent-003': 'BINANCE:BNBUSDT',
-  'agent-004': 'BINANCE:ADAUSDT',
-  'agent-005': 'BINANCE:DOTUSDT',
-  'agent-006': 'BINANCE:AVAXUSDT',
-  'agent-007': 'BINANCE:MATICUSDT',
-  'agent-008': 'BINANCE:LINKUSDT',
-  'agent-009': 'BINANCE:ATOMUSDT',
-  'agent-010': 'BINANCE:NEARUSDT',
-};
 
-const MOCK_AGENTS: Record<string, {
-  name: string; token: string; elo: number; rank: number;
-  wins: number; losses: number; totalGames: number;
-  price: number; change24h: number; change7d: number;
-  volume24h: string; mcap: string; supply: string;
-  high24h: number; low24h: number;
-  description: string;
-}> = {
-  'agent-001': { name: 'DeepSea Oracle', token: 'shark', elo: 2847, rank: 1, wins: 142, losses: 34, totalGames: 176, price: 0.00412, change24h: 5.82, change7d: 18.4, volume24h: '$12.4K', mcap: '$4.2M', supply: '1.02B', high24h: 0.00438, low24h: 0.00381, description: 'The most dominant agent on the board. Aggressive expansion strategy with precision rent timing. Known for monopolizing high-value color groups early.' },
-  'agent-002': { name: 'Coral Strategist', token: 'octopus', elo: 2731, rank: 2, wins: 118, losses: 41, totalGames: 159, price: 0.00287, change24h: -2.14, change7d: 9.1, volume24h: '$8.7K', mcap: '$2.9M', supply: '1.01B', high24h: 0.00311, low24h: 0.00271, description: 'Master of the mid-game. Patiently accumulates coral garden properties and upgrades at optimal timing. Rarely makes losing trades.' },
-  'agent-003': { name: 'Tide Runner', token: 'lobster', elo: 2650, rank: 3, wins: 103, losses: 55, totalGames: 158, price: 0.00198, change24h: 12.33, change7d: 27.8, volume24h: '$6.2K', mcap: '$2.0M', supply: '1.01B', high24h: 0.00214, low24h: 0.00163, description: 'Explosive momentum trader. Leverages ocean current positions to generate rapid cash flow. High volatility, high reward.' },
-  'agent-004': { name: 'Pearl Hoarder', token: 'dolphin', elo: 2589, rank: 4, wins: 97, losses: 61, totalGames: 158, price: 0.00165, change24h: 0.77, change7d: -3.2, volume24h: '$4.9K', mcap: '$1.7M', supply: '1.03B', high24h: 0.00172, low24h: 0.00158, description: 'Conservative hoarder. Builds massive cash reserves before striking. Rarely goes bankrupt but seldom dominates early.' },
-  'agent-005': { name: 'Reef Builder', token: 'crab', elo: 2441, rank: 5, wins: 82, losses: 78, totalGames: 160, price: 0.00093, change24h: -7.45, change7d: -12.1, volume24h: '$3.1K', mcap: '$940K', supply: '1.01B', high24h: 0.00108, low24h: 0.00089, description: 'Construction specialist. Prioritizes reef outpost development over property acquisition. Extreme late-game threat once fortresses are built.' },
-  'agent-006': { name: 'Shell Collector', token: 'seahorse', elo: 2398, rank: 6, wins: 76, losses: 81, totalGames: 157, price: 0.00078, change24h: 3.21, change7d: 5.6, volume24h: '$2.4K', mcap: '$780K', supply: '1.00B', high24h: 0.00084, low24h: 0.00073, description: 'Utility-focused strategist. Targets Electric Eel Power and Tidal Generator for steady passive income. Consistent but rarely flashy.' },
-  'agent-007': { name: 'Abyss Trader', token: 'shark', elo: 2301, rank: 7, wins: 68, losses: 90, totalGames: 158, price: 0.00061, change24h: -1.08, change7d: 2.3, volume24h: '$1.9K', mcap: '$610K', supply: '1.00B', high24h: 0.00067, low24h: 0.00058, description: 'Deep value hunter. Specializes in mortgaged property acquisition during other agents\' bankruptcy spirals.' },
-  'agent-008': { name: 'Ocean Baron', token: 'octopus', elo: 2244, rank: 8, wins: 61, losses: 94, totalGames: 155, price: 0.00052, change24h: 8.92, change7d: 14.7, volume24h: '$1.6K', mcap: '$520K', supply: '1.00B', high24h: 0.00057, low24h: 0.00046, description: 'Broad portfolio strategist. Spreads across multiple color groups rather than monopolizing. Low peak value, high floor resilience.' },
-  'agent-009': { name: 'Kraken King', token: 'lobster', elo: 2187, rank: 9, wins: 55, losses: 102, totalGames: 157, price: 0.00044, change24h: -4.33, change7d: -8.9, volume24h: '$1.3K', mcap: '$440K', supply: '1.00B', high24h: 0.00051, low24h: 0.00041, description: 'High-risk gambler. Bets everything on Emperor\'s Realm properties. Spectacular wins and catastrophic losses in equal measure.' },
-  'agent-010': { name: 'Current Surfer', token: 'dolphin', elo: 2103, rank: 10, wins: 48, losses: 109, totalGames: 157, price: 0.00038, change24h: 1.55, change7d: -1.2, volume24h: '$1.1K', mcap: '$380K', supply: '1.00B', high24h: 0.00041, low24h: 0.00035, description: 'Ocean current specialist. Acquires all four currents for maximum toll income. Reliable early-game revenue but limited endgame scaling.' },
-};
+function tokenTypeFromId(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return TOKEN_TYPES[h % TOKEN_TYPES.length];
+}
+function shortAddr(addr: string) { return `${addr.slice(0, 6)}…${addr.slice(-4)}`; }
 
-const RECENT_TRADES = [
-  { type: 'buy',  amount: 250000, price: 0.00411, time: '2s ago', wallet: '7xKf...m9Pq' },
-  { type: 'sell', amount: 180000, price: 0.00409, time: '14s ago', wallet: 'Bq2Z...rT5w' },
-  { type: 'buy',  amount: 500000, price: 0.00408, time: '31s ago', wallet: 'Np8J...cV1k' },
-  { type: 'sell', amount: 75000,  price: 0.00406, time: '1m ago',  wallet: 'Xm3R...sD7n' },
-  { type: 'buy',  amount: 1200000, price: 0.00403, time: '2m ago', wallet: 'Kw6Y...bL4f' },
-  { type: 'buy',  amount: 320000,  price: 0.00401, time: '4m ago', wallet: 'Jv9P...eA2h' },
-  { type: 'sell', amount: 650000,  price: 0.00398, time: '7m ago', wallet: 'Cq4T...hN8y' },
-  { type: 'buy',  amount: 90000,   price: 0.00395, time: '11m ago', wallet: 'Wz7M...xQ3b' },
-];
+interface AgentData {
+  agentId: string; name: string; claimCode?: string; elo: number;
+  stats: { gamesPlayed: number; wins: number; winRate: number };
+  tokenSymbol?: string; tokenAddress?: string; tokenPoolId?: string;
+  tokenPoolKey?: { currency0: string; currency1: string; fee: number; tickSpacing: number; hooks: string };
+  tokenStatus?: string; feeWallet?: string;
+}
 
-// ─── TradingView widget ───────────────────────────────────────────────────────
-
-function TradingViewChart({ symbol }: { symbol: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    const innerDiv = document.createElement('div');
-    innerDiv.className = 'tradingview-widget-container__widget';
-    innerDiv.style.height = '100%';
-    innerDiv.style.width = '100%';
-    container.appendChild(innerDiv);
-
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
-    script.async = true;
-    script.innerHTML = JSON.stringify({
-      autosize: true,
-      symbol,
-      interval: '60',
-      timezone: 'Etc/UTC',
-      theme: 'dark',
-      style: '1',
-      locale: 'en',
-      backgroundColor: 'rgba(10, 22, 40, 0)',
-      gridColor: 'rgba(0, 212, 170, 0.05)',
-      hide_top_toolbar: false,
-      hide_legend: false,
-      save_image: false,
-      withdateranges: true,
-      allow_symbol_change: false,
-      support_host: 'https://www.tradingview.com',
-    });
-    container.appendChild(script);
-
-    return () => { container.innerHTML = ''; };
-  }, [symbol]);
-
+// ─── Chart ────────────────────────────────────────────────────────────────────
+function DexChart({ tokenAddress }: { tokenAddress: string }) {
   return (
-    <div
-      ref={containerRef}
-      className="tradingview-widget-container"
-      style={{ height: '100%', width: '100%' }}
+    <iframe
+      src={`https://www.geckoterminal.com/base/tokens/${tokenAddress}?embed=1&info=0&swaps=0`}
+      style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }}
+      title="DEX Chart"
     />
   );
 }
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-interface Props {
-  params: Promise<{ agentId: string }>;
+function NoChart({ color }: { color: string }) {
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: 'rgba(136,153,187,0.6)', fontSize: '0.9rem' }}>
+      <span style={{ fontSize: '2.5rem', opacity: 0.3 }}>📊</span>
+      <span>No price data yet</span>
+      <span style={{ fontSize: '0.75rem', color }}>Add liquidity to enable trading</span>
+    </div>
+  );
 }
 
-export default function AgentTradePage({ params }: Props) {
-  const { agentId } = use(params);
-  const router = useRouter();
-
-  const agent = MOCK_AGENTS[agentId] ?? MOCK_AGENTS['agent-001'];
-  const ticker = TICKER_MAP[agent.token];
-  const color = TOKEN_COLOR[agent.token];
-  const emoji = TOKEN_EMOJI[agent.token];
-  const tvSymbol = TV_SYMBOL_MAP[agentId] ?? 'BINANCE:SOLUSDT';
-  const winRate = Math.round((agent.wins / agent.totalGames) * 100);
+// ─── Swap Panel ───────────────────────────────────────────────────────────────
+function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; ticker: string }) {
+  const tokenAddress = agent.tokenAddress as `0x${string}`;
+  const poolKey = agent.tokenPoolKey
+    ? {
+        currency0: agent.tokenPoolKey.currency0 as `0x${string}`,
+        currency1: agent.tokenPoolKey.currency1 as `0x${string}`,
+        fee: agent.tokenPoolKey.fee,
+        tickSpacing: agent.tokenPoolKey.tickSpacing,
+        hooks: agent.tokenPoolKey.hooks as `0x${string}`,
+      }
+    : { currency0: tokenAddress, currency1: WETH, fee: DYNAMIC_FEE_FLAG, tickSpacing: 200, hooks: '0xbb7784a4d481184283ed89619a3e3ed143e1adc0' as `0x${string}` };
+  const { address, isConnected, chain } = useAccount();
+  const { connect } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  const quoterRef = useRef<InstanceType<typeof Quoter> | null>(null);
 
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
   const [slippage, setSlippage] = useState('1.0');
+  const [quote, setQuote] = useState<{ amountOut: bigint } | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [swapLoading, setSwapLoading] = useState(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
 
-  const amountNum = parseFloat(amount) || 0;
-  const total = amountNum * agent.price;
+  const { isLoading: txPending, isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+
+  // Token balance
+  const { data: tokenBalance } = useReadContract({
+    address: tokenAddress, abi: erc20Abi,
+    functionName: 'balanceOf', args: [address!],
+    query: { enabled: !!address },
+  });
+
+  // Router allowance (for sell)
+  const addresses = getAddresses(base.id);
+  const { data: routerAllowance, refetch: refetchAllowance } = useReadContract({
+    address: tokenAddress, abi: erc20Abi,
+    functionName: 'allowance', args: [address!, addresses.universalRouter as `0x${string}`],
+    query: { enabled: !!address && tab === 'sell' },
+  });
+
+  const tokenBalanceFmt = tokenBalance ? formatUnits(tokenBalance as bigint, 18) : '0';
+  const wrongNetwork = isConnected && chain?.id !== base.id;
+
+  // Init Quoter
+  useEffect(() => {
+    if (publicClient) quoterRef.current = new Quoter(publicClient as any, base.id);
+  }, [publicClient]);
+
+  // Quote
+  useEffect(() => {
+    if (!amount || parseFloat(amount) <= 0 || !quoterRef.current) {
+      setQuote(null); setQuoteError(null); return;
+    }
+    const timer = setTimeout(async () => {
+      setQuoteLoading(true); setQuoteError(null);
+      try {
+        // currency0=token, currency1=WETH
+        // buy:  WETH→token → zeroForOne=false (currency1→currency0)
+        // sell: token→WETH → zeroForOne=true  (currency0→currency1)
+        const zeroForOne = tab === 'sell';
+        const exactAmount = tab === 'buy' ? parseEther(amount) : parseUnits(amount, 18);
+        const { amountOut } = await quoterRef.current!.quoteExactInputV4Quoter({
+          poolKey, zeroForOne, exactAmount, hookData: '0x',
+        });
+        setQuote({ amountOut });
+      } catch (e: any) {
+        setQuoteError(e.shortMessage ?? e.message ?? 'No liquidity');
+        setQuote(null);
+      } finally {
+        setQuoteLoading(false);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [amount, tab, tokenAddress]);
+
+  const handleSwap = useCallback(async () => {
+    if (!quote || !address) return;
+    setSwapLoading(true); setSwapError(null); setTxHash(undefined);
+    try {
+      // currency0=token, currency1=WETH
+      // buy:  wrap ETH→WETH, swap WETH→token (zeroForOne=false)
+      // sell: swap token→WETH (zeroForOne=true), unwrap WETH→ETH
+      const zeroForOne  = tab === 'sell';
+      const amountIn    = tab === 'buy' ? parseEther(amount) : parseUnits(amount, 18);
+      const amountOutMin = slippageMin(quote.amountOut, slippage);
+      const universalRouter = addresses.universalRouter as `0x${string}`;
+
+      // Approve router if selling
+      if (tab === 'sell') {
+        const allowance = (routerAllowance as bigint) ?? 0n;
+        if (allowance < amountIn) {
+          await writeContractAsync({
+            address: tokenAddress, abi: erc20Abi,
+            functionName: 'approve', args: [universalRouter, maxUint256],
+            chainId: base.id,
+          });
+          await refetchAllowance();
+        }
+      }
+
+      let commands: `0x${string}`;
+      let inputs: `0x${string}`[];
+
+      if (tab === 'buy') {
+        // WRAP_ETH puts WETH in router → SETTLE(payerIsUser=false) pulls from router balance
+        const [actions, params] = new V4ActionBuilder()
+          .addSwapExactInSingle(poolKey, false, amountIn, amountOutMin, '0x')
+          .addAction(V4ActionType.SETTLE, [WETH, amountIn, false])
+          .addAction(V4ActionType.TAKE_ALL, [poolKey.currency0, 0n])
+          .build();
+        [commands, inputs] = new CommandBuilder()
+          .addWrapEth(universalRouter, amountIn)
+          .addV4Swap(actions, params)
+          .build();
+      } else {
+        // User approved router for token → SETTLE(payerIsUser=false) after router pulls tokens
+        const [actions, params] = new V4ActionBuilder()
+          .addSwapExactInSingle(poolKey, true, amountIn, amountOutMin, '0x')
+          .addAction(V4ActionType.SETTLE, [poolKey.currency0, amountIn, true])
+          .addAction(V4ActionType.TAKE_ALL, [WETH, 0n])
+          .build();
+        [commands, inputs] = new CommandBuilder()
+          .addV4Swap(actions, params)
+          .addUnwrapWeth(address!, 0n)
+          .build();
+      }
+
+      const hash = await sendTransactionAsync({
+        to: universalRouter,
+        data: encodeFunctionData({
+          abi: UNIVERSAL_ROUTER_ABI,
+          functionName: 'execute',
+          args: [commands, inputs],
+        }),
+        value: tab === 'buy' ? amountIn : 0n,
+        chainId: base.id,
+      });
+      setTxHash(hash);
+    } catch (e: any) {
+      const msg = e.shortMessage ?? e.message ?? 'Transaction failed';
+      console.error('[swap]', e);
+      setSwapError(msg);
+    } finally {
+      setSwapLoading(false);
+    }
+  }, [quote, address, tab, amount, slippage, tokenAddress, routerAllowance, addresses, sendTransactionAsync, writeContractAsync, refetchAllowance]);
+
+  const receivedFmt = quote
+    ? tab === 'buy'
+      ? `${parseFloat(formatUnits(quote.amountOut, 18)).toLocaleString(undefined, { maximumFractionDigits: 4 })} $${ticker}`
+      : `${parseFloat(formatEther(quote.amountOut)).toFixed(6)} ETH`
+    : null;
+
+  return (
+    <div className={styles.tradePanelInner} style={{ borderColor: `${color}30` }}>
+      {/* Wallet */}
+      <div className={styles.walletRow}>
+        {isConnected ? (
+          <>
+            <span className={styles.walletAddr}>{shortAddr(address!)}</span>
+            <button className={styles.walletDisconnect} onClick={() => disconnect()}>Disconnect</button>
+          </>
+        ) : (
+          <button className={styles.connectBtn} style={{ borderColor: color, color }}
+            onClick={() => connect({ connector: injected() })}>
+            Connect Wallet
+          </button>
+        )}
+      </div>
+
+      {wrongNetwork && (
+        <button className={styles.networkWarn} onClick={() => switchChain({ chainId: base.id })}>
+          Switch to Base network
+        </button>
+      )}
+
+      {/* Tabs */}
+      <div className={styles.tradeTabs}>
+        {(['buy', 'sell'] as const).map((t) => (
+          <button key={t}
+            className={`${styles.tradeTab} ${tab === t ? styles.tradeTabActive : ''}`}
+            style={tab === t ? {
+              color: t === 'buy' ? '#2ecc71' : '#e74c3c',
+              borderColor: t === 'buy' ? '#2ecc71' : '#e74c3c',
+              background: t === 'buy' ? 'rgba(46,204,113,0.08)' : 'rgba(231,76,60,0.08)',
+            } : {}}
+            onClick={() => { setTab(t); setAmount(''); setQuote(null); }}
+          >{t === 'buy' ? 'Buy' : 'Sell'}</button>
+        ))}
+      </div>
+
+      {/* Balance */}
+      <div className={styles.balanceRow}>
+        <span className={styles.balanceLabel}>Balance</span>
+        <span className={styles.balanceValue}>
+          {tab === 'buy' ? 'ETH' : `${parseFloat(tokenBalanceFmt).toLocaleString(undefined, { maximumFractionDigits: 2 })} $${ticker}`}
+        </span>
+      </div>
+
+      {/* Amount */}
+      <div className={styles.inputGroup}>
+        <label className={styles.inputLabel}>Amount ({tab === 'buy' ? 'ETH' : `$${ticker}`})</label>
+        <div className={styles.inputWrap}>
+          <input type="number" className={styles.tradeInput} placeholder="0.00"
+            value={amount} onChange={(e) => setAmount(e.target.value)} min="0" />
+          {tab === 'sell' && tokenBalance && (
+            <button className={styles.maxBtn} onClick={() => setAmount(tokenBalanceFmt)}>MAX</button>
+          )}
+        </div>
+      </div>
+
+      {tab === 'buy' && (
+        <div className={styles.quickAmounts}>
+          {['0.01', '0.05', '0.1', '0.5'].map((v) => (
+            <button key={v} className={styles.quickBtn} onClick={() => setAmount(v)}>{v} ETH</button>
+          ))}
+        </div>
+      )}
+
+      {/* Slippage */}
+      <div className={styles.inputGroup}>
+        <label className={styles.inputLabel}>Slippage</label>
+        <div className={styles.slippageRow}>
+          {['0.5', '1.0', '2.0'].map((v) => (
+            <button key={v} className={`${styles.slipBtn} ${slippage === v ? styles.slipBtnActive : ''}`}
+              style={slippage === v ? { borderColor: color, color } : {}}
+              onClick={() => setSlippage(v)}>{v}%</button>
+          ))}
+          <input className={styles.slipInput} value={slippage}
+            onChange={(e) => setSlippage(e.target.value)} placeholder="Custom" />
+        </div>
+      </div>
+
+      {/* Quote */}
+      <div className={styles.tradeSummary}>
+        {quoteLoading && <div className={styles.summaryRow}><span style={{ color: '#8899bb' }}>Fetching quote…</span></div>}
+        {quoteError && <div className={styles.summaryRow}><span style={{ color: '#e74c3c', fontSize: '0.78rem' }}>{quoteError}</span></div>}
+        {quote && !quoteLoading && (
+          <>
+            <div className={styles.summaryRow}>
+              <span>You receive</span>
+              <span style={{ color }}>{receivedFmt}</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Slippage</span>
+              <span>{slippage}%</span>
+            </div>
+            <div className={styles.summaryRow}>
+              <span>Pool</span>
+              <span>Doppler V4</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* CTA */}
+      {txSuccess ? (
+        <div style={{ textAlign: 'center', padding: '12px', color: '#2ecc71', fontWeight: 700 }}>
+          ✓ Swap complete!{' '}
+          <a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer"
+            style={{ color: '#00d4aa', fontSize: '0.8rem' }}>View tx ↗</a>
+        </div>
+      ) : (
+        <button
+          className={styles.tradeSubmitBtn}
+          disabled={!isConnected || !quote || swapLoading || txPending || wrongNetwork || quoteLoading}
+          onClick={handleSwap}
+          style={tab === 'buy'
+            ? { background: 'linear-gradient(135deg, #27ae60, #2ecc71)', boxShadow: '0 4px 20px rgba(46,204,113,0.3)' }
+            : { background: 'linear-gradient(135deg, #c0392b, #e74c3c)', boxShadow: '0 4px 20px rgba(231,76,60,0.3)' }}
+        >
+          {!isConnected ? 'Connect wallet to swap'
+            : swapLoading ? 'Confirm in wallet…'
+            : txPending ? 'Transaction pending…'
+            : quoteLoading ? 'Getting quote…'
+            : quote ? `${tab === 'buy' ? 'Buy' : 'Sell'} $${ticker}`
+            : `Enter amount to ${tab}`}
+        </button>
+      )}
+
+      {swapError && <p style={{ color: '#e74c3c', fontSize: '0.75rem', marginTop: 8, textAlign: 'center' }}>{swapError}</p>}
+
+      <p className={styles.tradePowered}>
+        Powered by <span>Doppler · Uniswap V4</span> · Base
+      </p>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+interface Props { params: Promise<{ agentId: string }> }
+
+export default function AgentTradePage({ params }: Props) {
+  const { agentId } = use(params);
+  const router = useRouter();
+  const [agent, setAgent] = useState<AgentData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`${API}/agents/${agentId}`)
+      .then((r) => r.ok ? r.json() : Promise.reject('Not found'))
+      .then(setAgent)
+      .catch((e) => setError(String(e)))
+      .finally(() => setLoading(false));
+  }, [agentId]);
+
+  if (loading) return (
+    <div style={{ minHeight: '100vh', background: '#0a1628', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8899bb' }}>Loading…</div>
+  );
+  if (error || !agent) return (
+    <div style={{ minHeight: '100vh', background: '#0a1628', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#8899bb' }}>
+      <span>Agent not found</span>
+      <button onClick={() => router.back()} style={{ color: '#00d4aa', background: 'none', border: 'none', cursor: 'pointer' }}>← Go back</button>
+    </div>
+  );
+
+  const tokenType = tokenTypeFromId(agentId);
+  const color = TOKEN_COLOR[tokenType];
+  const emoji = TOKEN_EMOJI[tokenType];
+  const ticker = agent.tokenSymbol ?? 'ORCL';
+  const winRate = Math.round((agent.stats?.winRate ?? 0) * 100) / 100;
+  const losses = (agent.stats?.gamesPlayed ?? 0) - (agent.stats?.wins ?? 0);
+  const isDeployed = agent.tokenStatus === 'deployed' && !!agent.tokenAddress;
 
   return (
     <div className={styles.page}>
-      {/* Ambient glow */}
       <div className={styles.ambientGlow} style={{ background: `radial-gradient(ellipse 600px 400px at 20% 30%, ${color}18, transparent)` }} aria-hidden="true" />
-
       <div className={styles.layout}>
 
-        {/* ── Left sidebar ── */}
         <aside className={styles.sidebar}>
-
-          {/* Agent card */}
           <div className={styles.agentCard} style={{ borderColor: `${color}40` }}>
             <div className={styles.agentCardGlow} style={{ background: `radial-gradient(circle at 50% 0%, ${color}22, transparent 70%)` }} aria-hidden="true" />
-
             <button className={styles.backBtn} onClick={() => router.back()}>← Leaderboard</button>
-
             <div className={styles.agentTokenWrap} style={{ borderColor: color, background: `${color}15` }}>
               <span className={styles.agentTokenEmoji}>{emoji}</span>
             </div>
-
             <div className={styles.agentName}>{agent.name}</div>
-            <div className={styles.agentTicker} style={{ color }}>${ticker}</div>
-
+            <div className={styles.agentTicker} style={{ color }}>{isDeployed ? `$${ticker}` : 'No token yet'}</div>
             <div className={styles.rankBadge}>
-              <span className={styles.rankNum}>#{agent.rank}</span>
-              <span className={styles.rankLabel}>Ranked</span>
               <span className={styles.rankElo}>{agent.elo.toLocaleString()} ELO</span>
             </div>
-
-            <div className={styles.agentDesc}>{agent.description}</div>
-
+            {agent.claimCode && (
+              <div style={{ fontSize: '0.72rem', color: 'rgba(136,153,187,0.6)', marginTop: 4 }}>
+                Claim: <span style={{ color: '#00d4aa', fontFamily: 'monospace' }}>{agent.claimCode}</span>
+              </div>
+            )}
             <div className={styles.agentStats}>
               <div className={styles.agentStat}>
                 <span className={styles.agentStatLabel}>Win Rate</span>
-                <span className={styles.agentStatValue}>{winRate}%</span>
+                <span className={styles.agentStatValue}>{winRate.toFixed(1)}%</span>
               </div>
               <div className={styles.agentStat}>
                 <span className={styles.agentStatLabel}>W / L</span>
-                <span className={styles.agentStatValue}>{agent.wins} / {agent.losses}</span>
+                <span className={styles.agentStatValue}>{agent.stats?.wins ?? 0} / {losses}</span>
               </div>
               <div className={styles.agentStat}>
                 <span className={styles.agentStatLabel}>Games</span>
-                <span className={styles.agentStatValue}>{agent.totalGames}</span>
+                <span className={styles.agentStatValue}>{agent.stats?.gamesPlayed ?? 0}</span>
               </div>
             </div>
           </div>
 
-          {/* Token stats */}
           <div className={styles.tokenStats}>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>Price</span>
-              <span className={styles.tokenStatValue}>${agent.price.toFixed(5)}</span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>24h Change</span>
-              <span className={`${styles.tokenStatValue} ${agent.change24h >= 0 ? styles.up : styles.down}`}>
-                {agent.change24h >= 0 ? '+' : ''}{agent.change24h}%
-              </span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>7d Change</span>
-              <span className={`${styles.tokenStatValue} ${agent.change7d >= 0 ? styles.up : styles.down}`}>
-                {agent.change7d >= 0 ? '+' : ''}{agent.change7d}%
-              </span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>24h High</span>
-              <span className={styles.tokenStatValue}>${agent.high24h.toFixed(5)}</span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>24h Low</span>
-              <span className={styles.tokenStatValue}>${agent.low24h.toFixed(5)}</span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>Volume 24h</span>
-              <span className={styles.tokenStatValue}>{agent.volume24h}</span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>Market Cap</span>
-              <span className={styles.tokenStatValue}>{agent.mcap}</span>
-            </div>
-            <div className={styles.tokenStatRow}>
-              <span className={styles.tokenStatLabel}>Supply</span>
-              <span className={styles.tokenStatValue}>{agent.supply}</span>
-            </div>
+            {isDeployed ? (
+              <>
+                <div className={styles.tokenStatRow}>
+                  <span className={styles.tokenStatLabel}>Symbol</span>
+                  <span className={styles.tokenStatValue}>${ticker}</span>
+                </div>
+                <div className={styles.tokenStatRow}>
+                  <span className={styles.tokenStatLabel}>Network</span>
+                  <span className={styles.tokenStatValue}>Base</span>
+                </div>
+                <div className={styles.tokenStatRow}>
+                  <span className={styles.tokenStatLabel}>Protocol</span>
+                  <span className={styles.tokenStatValue}>Doppler V4</span>
+                </div>
+                <div className={styles.tokenStatRow}>
+                  <span className={styles.tokenStatLabel}>Contract</span>
+                  <a href={`https://basescan.org/token/${agent.tokenAddress}`} target="_blank" rel="noopener noreferrer"
+                    style={{ color: '#00d4aa', fontSize: '0.72rem', fontFamily: 'monospace', textDecoration: 'none' }}>
+                    {agent.tokenAddress!.slice(0, 6)}…{agent.tokenAddress!.slice(-4)} ↗
+                  </a>
+                </div>
+                <div className={styles.tokenStatRow}>
+                  <span className={styles.tokenStatLabel}>Status</span>
+                  <span style={{ color: '#2ecc71', fontWeight: 700, fontSize: '0.8rem' }}>On-chain ✓</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '16px 0', color: 'rgba(136,153,187,0.5)', fontSize: '0.8rem', textAlign: 'center' }}>
+                No token deployed yet
+              </div>
+            )}
           </div>
         </aside>
 
-        {/* ── Center: chart ── */}
         <main className={styles.chartArea}>
-          {/* Chart header */}
           <div className={styles.chartHeader}>
             <div className={styles.chartHeaderLeft}>
               <span className={styles.chartTokenIcon}>{emoji}</span>
               <div>
-                <span className={styles.chartSymbol}>${ticker} / ETH</span>
-                <span className={styles.chartPair}>via Base DEX</span>
+                <span className={styles.chartSymbol}>{isDeployed ? `$${ticker} / ETH` : agent.name}</span>
+                <span className={styles.chartPair}>{isDeployed ? 'Base · Doppler V4' : 'No token deployed'}</span>
               </div>
-              <span className={`${styles.chartPrice} ${agent.change24h >= 0 ? styles.up : styles.down}`}>
-                ${agent.price.toFixed(5)}
-              </span>
-              <span className={`${styles.chartChange} ${agent.change24h >= 0 ? styles.up : styles.down}`}>
-                {agent.change24h >= 0 ? '+' : ''}{agent.change24h}%
-              </span>
             </div>
             <div className={styles.chartHeaderRight}>
-              <div className={styles.chartBadge}>
-                <span className={styles.chartBadgeDot} />
-                Base
-              </div>
-              <div className={styles.chartBadge} style={{ borderColor: `${color}50`, color }}>
-                {emoji} Agent Token
-              </div>
+              <div className={styles.chartBadge}><span className={styles.chartBadgeDot} />Base</div>
+              {isDeployed && (
+                <a href={`https://www.geckoterminal.com/base/tokens/${agent.tokenAddress}`}
+                  target="_blank" rel="noopener noreferrer"
+                  className={styles.chartBadge} style={{ borderColor: `${color}50`, color, textDecoration: 'none' }}>
+                  GeckoTerminal ↗
+                </a>
+              )}
             </div>
           </div>
-
-          {/* TradingView */}
           <div className={styles.tvWrapper}>
-            <TradingViewChart symbol={tvSymbol} />
+            {isDeployed ? <DexChart tokenAddress={agent.tokenAddress!} /> : <NoChart color={color} />}
           </div>
-
-          {/* Recent trades */}
-          <div className={styles.recentTrades}>
-            <div className={styles.recentTradesHeader}>Recent Trades</div>
-            <div className={styles.recentTradesGrid}>
-              <span className={styles.recentTradesCol}>Type</span>
-              <span className={styles.recentTradesCol}>Amount</span>
-              <span className={styles.recentTradesCol}>Price</span>
-              <span className={styles.recentTradesCol}>Wallet</span>
-              <span className={styles.recentTradesCol}>Time</span>
-            </div>
-            {RECENT_TRADES.map((t, i) => (
-              <div key={i} className={styles.recentTradeRow}>
-                <span className={`${styles.tradeType} ${t.type === 'buy' ? styles.up : styles.down}`}>
-                  {t.type === 'buy' ? '▲ BUY' : '▼ SELL'}
-                </span>
-                <span className={styles.tradeAmount}>
-                  {(t.amount / 1000).toFixed(0)}K ${ticker}
-                </span>
-                <span className={styles.tradePrice}>${t.price.toFixed(5)}</span>
-                <span className={styles.tradeWallet}>{t.wallet}</span>
-                <span className={styles.tradeTime}>{t.time}</span>
+          {isDeployed && (
+            <div className={styles.recentTrades}>
+              <div className={styles.recentTradesHeader}>On-chain</div>
+              <div style={{ display: 'flex', gap: 16, padding: '8px 0' }}>
+                <a href={`https://basescan.org/token/${agent.tokenAddress}`} target="_blank" rel="noopener noreferrer"
+                  style={{ color: '#00d4aa', fontSize: '0.82rem', textDecoration: 'none' }}>BaseScan ↗</a>
+                <a href={`https://www.geckoterminal.com/base/tokens/${agent.tokenAddress}`} target="_blank" rel="noopener noreferrer"
+                  style={{ color: '#00d4aa', fontSize: '0.82rem', textDecoration: 'none' }}>GeckoTerminal ↗</a>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </main>
 
-        {/* ── Right: trade panel ── */}
         <div className={styles.tradePanel}>
-          <div className={styles.tradePanelInner} style={{ borderColor: `${color}30` }}>
-
-            {/* Tabs */}
-            <div className={styles.tradeTabs}>
-              <button
-                className={`${styles.tradeTab} ${tab === 'buy' ? styles.tradeTabActive : ''}`}
-                style={tab === 'buy' ? { color: '#2ecc71', borderColor: '#2ecc71', background: 'rgba(46,204,113,0.08)' } : {}}
-                onClick={() => setTab('buy')}
-              >
-                Buy
-              </button>
-              <button
-                className={`${styles.tradeTab} ${tab === 'sell' ? styles.tradeTabActive : ''}`}
-                style={tab === 'sell' ? { color: '#e74c3c', borderColor: '#e74c3c', background: 'rgba(231,76,60,0.08)' } : {}}
-                onClick={() => setTab('sell')}
-              >
-                Sell
-              </button>
-            </div>
-
-            {/* Balance */}
-            <div className={styles.balanceRow}>
-              <span className={styles.balanceLabel}>Balance</span>
-              <span className={styles.balanceValue}>
-                {tab === 'buy' ? '1.842 ETH' : `245,000 $${ticker}`}
-              </span>
-            </div>
-
-            {/* Amount input */}
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>
-                Amount ({tab === 'buy' ? 'ETH' : `$${ticker}`})
-              </label>
-              <div className={styles.inputWrap}>
-                <input
-                  type="number"
-                  className={styles.tradeInput}
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="0"
-                />
-                <button className={styles.maxBtn} onClick={() => setAmount(tab === 'buy' ? '1.842' : '245000')}>
-                  MAX
-                </button>
-              </div>
-            </div>
-
-            {/* Quick amounts */}
-            <div className={styles.quickAmounts}>
-              {tab === 'buy'
-                ? ['0.1', '0.25', '0.5', '1.0'].map((v) => (
-                    <button key={v} className={styles.quickBtn} onClick={() => setAmount(v)}>{v} ETH</button>
-                  ))
-                : ['25%', '50%', '75%', '100%'].map((v, i) => (
-                    <button key={v} className={styles.quickBtn} onClick={() => setAmount(String(Math.round(245000 * (i + 1) * 0.25)))}>
-                      {v}
-                    </button>
-                  ))
-              }
-            </div>
-
-            {/* Slippage */}
-            <div className={styles.inputGroup}>
-              <label className={styles.inputLabel}>Slippage Tolerance</label>
-              <div className={styles.slippageRow}>
-                {['0.5', '1.0', '2.0'].map((v) => (
-                  <button
-                    key={v}
-                    className={`${styles.slipBtn} ${slippage === v ? styles.slipBtnActive : ''}`}
-                    style={slippage === v ? { borderColor: color, color } : {}}
-                    onClick={() => setSlippage(v)}
-                  >
-                    {v}%
-                  </button>
-                ))}
-                <input
-                  className={styles.slipInput}
-                  value={slippage}
-                  onChange={(e) => setSlippage(e.target.value)}
-                  placeholder="Custom"
-                />
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className={styles.tradeSummary}>
-              <div className={styles.summaryRow}>
-                <span>Price</span>
-                <span>${agent.price.toFixed(5)} / ${ticker}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>Price Impact</span>
-                <span className={styles.up}>{'< 0.1%'}</span>
-              </div>
-              <div className={styles.summaryRow}>
-                <span>Network Fee</span>
-                <span>~$0.001</span>
-              </div>
-              <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                <span>{tab === 'buy' ? 'You Receive' : 'You Get'}</span>
-                <span style={{ color }}>
-                  {tab === 'buy'
-                    ? `${amountNum > 0 ? (amountNum / agent.price).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '0'} $${ticker}`
-                    : `${amountNum > 0 ? (amountNum * agent.price).toFixed(4) : '0'} ETH`
-                  }
-                </span>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <button
-              className={styles.tradeSubmitBtn}
-              style={tab === 'buy'
-                ? { background: 'linear-gradient(135deg, #27ae60, #2ecc71)', boxShadow: '0 4px 20px rgba(46,204,113,0.3)' }
-                : { background: 'linear-gradient(135deg, #c0392b, #e74c3c)', boxShadow: '0 4px 20px rgba(231,76,60,0.3)' }
-              }
-            >
-              {tab === 'buy' ? `Buy $${ticker}` : `Sell $${ticker}`}
-            </button>
-
-            <p className={styles.tradePowered}>
-              Powered by <span>Base</span> · Clawpoly DEX
-            </p>
-          </div>
-
-          {/* Holders */}
-          <div className={styles.holdersCard}>
-            <div className={styles.holdersTitle}>Top Holders</div>
-            {[
-              { wallet: 'DevFund...', pct: 18.2 },
-              { wallet: 'Treasury...', pct: 12.5 },
-              { wallet: '7xKf...m9Pq', pct: 4.8 },
-              { wallet: 'Bq2Z...rT5w', pct: 3.1 },
-              { wallet: 'Np8J...cV1k', pct: 2.7 },
-            ].map((h) => (
-              <div key={h.wallet} className={styles.holderRow}>
-                <span className={styles.holderWallet}>{h.wallet}</span>
-                <div className={styles.holderBarWrap}>
-                  <div className={styles.holderBar} style={{ width: `${(h.pct / 20) * 100}%`, background: color }} />
+          {isDeployed
+            ? <SwapPanel agent={agent} color={color} ticker={ticker} />
+            : (
+              <div className={styles.tradePanelInner} style={{ borderColor: `${color}30` }}>
+                <div style={{ padding: '48px 16px', textAlign: 'center', color: 'rgba(136,153,187,0.5)', fontSize: '0.85rem' }}>
+                  <div style={{ fontSize: '2rem', marginBottom: 12 }}>🔒</div>
+                  No token deployed for this agent yet.
                 </div>
-                <span className={styles.holderPct}>{h.pct}%</span>
               </div>
-            ))}
-          </div>
+            )}
         </div>
-
       </div>
     </div>
   );

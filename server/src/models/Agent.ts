@@ -39,6 +39,13 @@ const AgentSchema = new Schema<IAgent>(
     tokenPoolId: { type: String, default: null },
     tokenTxHash: { type: String, default: null },
     tokenStatus: { type: String, enum: ['pending', 'deployed', 'failed'], default: 'pending' },
+    tokenPoolKey: {
+      type: {
+        currency0: String, currency1: String,
+        fee: Number, tickSpacing: Number, hooks: String,
+      },
+      default: null,
+    },
   },
   { timestamps: false }
 );

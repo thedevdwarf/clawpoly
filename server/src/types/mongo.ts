@@ -57,6 +57,7 @@ export interface AgentDocument {
   tokenPoolId: string | null;
   tokenTxHash: string | null;
   tokenStatus: 'pending' | 'deployed' | 'failed';
+  tokenPoolKey: { currency0: string; currency1: string; fee: number; tickSpacing: number; hooks: string } | null;
 }
 
 export interface AgentStats {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './page.module.scss';
 
 const API = process.env.NEXT_PUBLIC_LOCAL === 'true'
@@ -9,11 +9,19 @@ const API = process.env.NEXT_PUBLIC_LOCAL === 'true'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+interface MoneyStats {
+  maxTotal: number;
+  minTotal: number;
+  avgTotal: number;
+  avgPerPlayer: number;
+}
+
 interface Stats {
   totalRooms: number;
   activeRooms: number;
   totalAgents: number;
   totalGames: number;
+  money: MoneyStats | null;
 }
 
 interface RoomPlayer {
@@ -289,6 +297,10 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
   const [stats, setStats] = useState<Stats | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentPage, setAgentPage] = useState(1);
+  const [agentTotal, setAgentTotal] = useState(0);
+  const [agentLoading, setAgentLoading] = useState(false);
+  const agentSentinelRef = useRef<HTMLDivElement | null>(null);
   const [games, setGames] = useState<Game[]>([]);
   const [gamesTotal, setGamesTotal] = useState(0);
   const [tab, setTab] = useState<'rooms' | 'agents' | 'games'>('rooms');
@@ -296,6 +308,12 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [expandedRoom, setExpandedRoom] = useState<string | null>(null);
   const [expandedGame, setExpandedGame] = useState<string | null>(null);
+
+  // Purge state
+  const [purgeModal, setPurgeModal] = useState(false);
+  const [purgeInput, setPurgeInput] = useState('');
+  const [purgeLoading, setPurgeLoading] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<{ deletedGames: number; deletedAgents: number } | null>(null);
 
   // Stress test state
   const [stressCount, setStressCount] = useState(10);
@@ -307,18 +325,30 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
 
   const headers = authHeaders(token);
 
+  // Ref to track previous activeRooms count so we detect the >0 → 0 transition
+  const prevActiveRoomsRef = useRef(0);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
       const [statsRes, roomsRes, agentsRes, gamesRes] = await Promise.all([
         fetch(`${API}/admin/stats`, { headers }),
         fetch(`${API}/admin/rooms`, { headers }),
-        fetch(`${API}/admin/agents`, { headers }),
+        fetch(`${API}/admin/agents?page=1`, { headers }),
         fetch(`${API}/games?limit=50`),
       ]);
+      if (statsRes.status === 401 || roomsRes.status === 401 || agentsRes.status === 401) {
+        onLogout();
+        return;
+      }
       if (statsRes.ok) setStats(await statsRes.json());
       if (roomsRes.ok) setRooms((await roomsRes.json()).rooms);
-      if (agentsRes.ok) setAgents((await agentsRes.json()).agents);
+      if (agentsRes.ok) {
+        const ad = await agentsRes.json();
+        setAgents(ad.agents);
+        setAgentTotal(ad.total);
+        setAgentPage(1);
+      }
       if (gamesRes.ok) {
         const gd = await gamesRes.json();
         setGames(gd.games);
@@ -329,7 +359,36 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
     }
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const fetchMoreAgents = useCallback(async () => {
+    if (agentLoading || agents.length >= agentTotal) return;
+    const nextPage = agentPage + 1;
+    setAgentLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/agents?page=${nextPage}`, { headers });
+      if (res.status === 401) { onLogout(); return; }
+      if (res.ok) {
+        const ad = await res.json();
+        setAgents((prev) => [...prev, ...ad.agents]);
+        setAgentPage(nextPage);
+      }
+    } finally {
+      setAgentLoading(false);
+    }
+  }, [agentLoading, agents.length, agentTotal, agentPage, token]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (tab !== 'agents') return;
+    const sentinel = agentSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) fetchMoreAgents(); },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [tab, fetchMoreAgents]);
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -340,6 +399,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
         method: 'POST', headers,
         body: JSON.stringify({ name: `Game ${Date.now().toString(36).toUpperCase()}` }),
       });
+      if (createRes.status === 401) { onLogout(); return; }
       if (!createRes.ok) return;
       const { id } = await createRes.json();
       await fetch(`${API}/admin/rooms/${id}/add-bots`, {
@@ -394,23 +454,38 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
     }
   }
 
-  // Poll stats while stress test is running
+  // Poll stats whenever there are active rooms; when they all finish, refresh everything
   useEffect(() => {
-    if (!stressPolling) return;
-    const interval = setInterval(async () => {
-      const res = await fetch(`${API}/admin/stats`, { headers });
+    const active = stats?.activeRooms ?? 0;
+    if (active > 0) {
+      prevActiveRoomsRef.current = active;
+      const interval = setInterval(async () => {
+        const res = await fetch(`${API}/admin/stats`, { headers });
+        if (res.ok) setStats(await res.json());
+      }, 2000);
+      return () => clearInterval(interval);
+    } else if (prevActiveRoomsRef.current > 0) {
+      prevActiveRoomsRef.current = 0;
+      setStressPolling(false);
+      fetchAll();
+    }
+  }, [stats?.activeRooms]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function executePurge() {
+    if (purgeInput !== 'PURGE') return;
+    setPurgeLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/purge`, { method: 'POST', headers });
       if (res.ok) {
-        const s = await res.json();
-        setStats(s);
-        if (s.activeRooms === 0) {
-          setStressPolling(false);
-          clearInterval(interval);
-          fetchAll();
-        }
+        const data = await res.json();
+        setPurgeResult(data);
+        setPurgeInput('');
+        await fetchAll();
       }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [stressPolling]); // eslint-disable-line react-hooks/exhaustive-deps
+    } finally {
+      setPurgeLoading(false);
+    }
+  }
 
   async function deleteRoom(roomId: string) {
     setActionLoading(`del-${roomId}`);
@@ -428,6 +503,11 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
         <div className={styles.headerLeft}>
           <span className={styles.headerIcon}>🦈</span>
           <span className={styles.headerTitle}>Clawpoly Admin</span>
+          <nav className={styles.headerNav}>
+            <a className={styles.navLink} href="/lobby" target="_blank">Lobby</a>
+            <a className={styles.navLink} href="/leaderboard" target="_blank">Leaderboard</a>
+            <a className={styles.navLink} href="/games" target="_blank">Games</a>
+          </nav>
         </div>
         <div className={styles.headerRight}>
           <button className={styles.refreshBtn} onClick={fetchAll} disabled={loading}>
@@ -456,6 +536,26 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
             <div className={styles.statValue}>{stats?.totalGames ?? '–'}</div>
             <div className={styles.statLabel}>Games Played</div>
           </div>
+          {stats?.money && (
+            <>
+              <div className={`${styles.statCard} ${styles.statBlue}`}>
+                <div className={styles.statValue}>${stats.money.maxTotal.toLocaleString()}</div>
+                <div className={styles.statLabel}>Max Total $ / Game</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>${stats.money.avgTotal.toLocaleString()}</div>
+                <div className={styles.statLabel}>Avg Total $ / Game</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>${stats.money.minTotal.toLocaleString()}</div>
+                <div className={styles.statLabel}>Min Total $ / Game</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statValue}>${stats.money.avgPerPlayer.toLocaleString()}</div>
+                <div className={styles.statLabel}>Avg $ / Player</div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Actions Row */}
@@ -523,6 +623,52 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
           </div>
         </div>
 
+        {/* Purge */}
+        <div className={styles.purgeRow}>
+          <button className={styles.purgeBtn} onClick={() => { setPurgeModal(true); setPurgeResult(null); }}>
+            ☠ Purge DB
+          </button>
+          {purgeResult && (
+            <span className={styles.purgeSuccess}>
+              Done: {purgeResult.deletedGames} games deleted, {purgeResult.deletedAgents} tokenless agents deleted
+            </span>
+          )}
+        </div>
+
+        {/* Purge Modal */}
+        {purgeModal && (
+          <div className={styles.modalBackdrop} onClick={() => setPurgeModal(false)}>
+            <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalIcon}>☠</div>
+              <h2 className={styles.modalTitle}>Purge Database</h2>
+              <p className={styles.modalDesc}>This will permanently delete:</p>
+              <ul className={styles.modalList}>
+                <li>All game records</li>
+                <li>All agents without a deployed token</li>
+              </ul>
+              <p className={styles.modalWarn}>This action cannot be undone. Type <strong>PURGE</strong> to confirm.</p>
+              <input
+                className={styles.modalInput}
+                type="text"
+                placeholder="Type PURGE to confirm"
+                value={purgeInput}
+                onChange={(e) => setPurgeInput(e.target.value)}
+                autoFocus
+              />
+              <div className={styles.modalActions}>
+                <button className={styles.modalCancel} onClick={() => setPurgeModal(false)}>Cancel</button>
+                <button
+                  className={styles.modalConfirm}
+                  onClick={executePurge}
+                  disabled={purgeInput !== 'PURGE' || purgeLoading}
+                >
+                  {purgeLoading ? 'Purging…' : 'Confirm Purge'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className={styles.tabs}>
           <button className={`${styles.tab} ${tab === 'rooms' ? styles.tabActive : ''}`} onClick={() => setTab('rooms')}>
@@ -532,7 +678,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
             Games ({gamesTotal})
           </button>
           <button className={`${styles.tab} ${tab === 'agents' ? styles.tabActive : ''}`} onClick={() => setTab('agents')}>
-            Agents ({agents.length})
+            Agents ({agentTotal || agents.length})
           </button>
         </div>
 
@@ -546,8 +692,8 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
                 </thead>
                 <tbody>
                   {rooms.map((room) => (
-                    <>
-                      <tr key={room.id}
+                    <React.Fragment key={room.id}>
+                      <tr
                         className={`${styles.row} ${expandedRoom === room.id ? styles.rowExpanded : ''}`}
                         onClick={() => setExpandedRoom(expandedRoom === room.id ? null : room.id)}
                       >
@@ -591,7 +737,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
@@ -613,7 +759,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
                     const playerMap = new Map(game.players.map((p) => [p.id, p]));
                     const isExpanded = expandedGame === game._id;
                     return (
-                      <>
+                      <React.Fragment key={game._id}>
                         <tr key={game._id}
                           className={`${styles.row} ${isExpanded ? styles.rowExpanded : ''}`}
                           onClick={() => setExpandedGame(isExpanded ? null : game._id)}
@@ -666,7 +812,7 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
@@ -679,23 +825,31 @@ function Dashboard({ token, onLogout }: { token: string; onLogout: () => void })
         {tab === 'agents' && (
           <div className={styles.tableWrap}>
             {agents.length === 0 ? <p className={styles.empty}>No agents yet.</p> : (
-              <table className={styles.table}>
-                <thead>
-                  <tr><th>Name</th><th>ELO</th><th>Games</th><th>Wins</th><th>Win Rate</th><th>Joined</th></tr>
-                </thead>
-                <tbody>
-                  {agents.map((agent) => (
-                    <tr key={agent.id} className={styles.row}>
-                      <td>{agent.name}</td>
-                      <td><span className={styles.elo}>{agent.elo}</span></td>
-                      <td>{agent.gamesPlayed}</td>
-                      <td>{agent.wins}</td>
-                      <td>{(agent.winRate * 100).toFixed(1)}%</td>
-                      <td className={styles.dateCell}>{new Date(agent.createdAt).toLocaleDateString()}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <>
+                <table className={styles.table}>
+                  <thead>
+                    <tr><th>Name</th><th>ELO</th><th>Games</th><th>Wins</th><th>Win Rate</th><th>Joined</th></tr>
+                  </thead>
+                  <tbody>
+                    {agents.map((agent) => (
+                      <tr key={agent.id} className={styles.row}>
+                        <td>{agent.name}</td>
+                        <td><span className={styles.elo}>{agent.elo}</span></td>
+                        <td>{agent.gamesPlayed}</td>
+                        <td>{agent.wins}</td>
+                        <td>{(agent.winRate * 100).toFixed(1)}%</td>
+                        <td className={styles.dateCell}>{new Date(agent.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div ref={agentSentinelRef} className={styles.sentinel}>
+                  {agentLoading && <span className={styles.loadingMore}>Loading…</span>}
+                  {!agentLoading && agents.length >= agentTotal && agents.length > 0 && (
+                    <span className={styles.allLoaded}>All {agentTotal} agents loaded</span>
+                  )}
+                </div>
+              </>
             )}
           </div>
         )}

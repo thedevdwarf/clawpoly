@@ -33,15 +33,41 @@ router.get('/stats', adminAuth, async (_req, res) => {
   try {
     const rooms = await roomManager.listRooms();
     const activeRooms = rooms.filter((r) => r.gamePhase === 'playing').length;
-    const [agentCount, gameCount] = await Promise.all([
+    const [agentCount, gameCount, moneyAgg] = await Promise.all([
       AgentModel.countDocuments(),
       GameModel.countDocuments(),
+      GameModel.aggregate([
+        {
+          $project: {
+            totalMoney: { $sum: '$players.finalMoney' },
+            playerCount: { $size: '$players' },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            maxTotal: { $max: '$totalMoney' },
+            minTotal: { $min: '$totalMoney' },
+            avgTotal: { $avg: '$totalMoney' },
+            avgPerPlayer: { $avg: { $divide: ['$totalMoney', '$playerCount'] } },
+          },
+        },
+      ]),
     ]);
+    const money = moneyAgg[0] ?? null;
     res.json({
       totalRooms: rooms.length,
       activeRooms,
       totalAgents: agentCount,
       totalGames: gameCount,
+      money: money
+        ? {
+            maxTotal: Math.round(money.maxTotal),
+            minTotal: Math.round(money.minTotal),
+            avgTotal: Math.round(money.avgTotal),
+            avgPerPlayer: Math.round(money.avgPerPlayer),
+          }
+        : null,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -260,6 +286,22 @@ router.post('/stress-test', adminAuth, async (req, res) => {
   }
 
   res.json({ requested: total, started, errors: errors.slice(0, 10) });
+});
+
+// POST /api/v1/admin/purge
+router.post('/purge', adminAuth, async (_req, res) => {
+  try {
+    const [deletedGames, deletedAgents] = await Promise.all([
+      GameModel.deleteMany({}),
+      AgentModel.deleteMany({ tokenStatus: { $ne: 'deployed' } }),
+    ]);
+    res.json({
+      deletedGames: deletedGames.deletedCount,
+      deletedAgents: deletedAgents.deletedCount,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 export default router;
