@@ -1,6 +1,7 @@
 'use client';
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
   useAccount, useConnect, useDisconnect, useSwitchChain,
@@ -20,6 +21,16 @@ const API = process.env.NEXT_PUBLIC_LOCAL === 'true'
 
 // WETH on Base
 const WETH = '0x4200000000000000000000000000000000000006' as const;
+// Canonical Permit2
+const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3' as `0x${string}`;
+const PERMIT2_ABI = [
+  { type: 'function', name: 'allowance', stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }, { name: 'token', type: 'address' }, { name: 'spender', type: 'address' }],
+    outputs: [{ name: 'amount', type: 'uint160' }, { name: 'expiration', type: 'uint48' }, { name: 'nonce', type: 'uint48' }] },
+  { type: 'function', name: 'approve', stateMutability: 'nonpayable',
+    inputs: [{ name: 'token', type: 'address' }, { name: 'spender', type: 'address' }, { name: 'amount', type: 'uint160' }, { name: 'expiration', type: 'uint48' }],
+    outputs: [] },
+] as const;
 
 const UNIVERSAL_ROUTER_ABI = [{
   type: 'function', name: 'execute', stateMutability: 'payable',
@@ -57,11 +68,145 @@ interface AgentData {
   tokenStatus?: string; feeWallet?: string;
 }
 
+// ─── Recent Trades (via Base RPC Transfer events) ─────────────────────────────
+// Buy:  Transfer(from=PoolManager, to=buyer)  — PoolManager sends token out
+// Sell: Transfer(from=seller, to=PoolManager) — PoolManager receives token
+
+interface GeckoTrade {
+  tx_hash: string;
+  tx_from_address: string;
+  kind: 'buy' | 'sell';
+  from_token_amount: string;
+  to_token_amount: string;
+  volume_in_usd: string;
+  block_timestamp: string;
+}
+
+function secsAgo(ts: string) {
+  const s = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 1000));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  return `${Math.floor(s / 3600)}h`;
+}
+
+function fmtAmt(n: string) {
+  const v = parseFloat(n);
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(2)}K`;
+  return v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function RecentTrades({ tokenAddress, ticker, color }: { tokenAddress: string; ticker: string; color: string }) {
+  const [trades, setTrades] = useState<GeckoTrade[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const fetchTrades = useCallback(async () => {
+    try {
+      // Step 1: find pool address for this token on Base
+      const poolsRes = await fetch(
+        `https://api.geckoterminal.com/api/v2/networks/base/tokens/${tokenAddress}/pools?page=1`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!poolsRes.ok) { setFetchError(`pools ${poolsRes.status}`); return; }
+      const poolsJson = await poolsRes.json();
+      const poolAddress = poolsJson.data?.[0]?.attributes?.address;
+      if (!poolAddress) { setFetchError('No pool found'); return; }
+
+      // Step 2: fetch trades for that pool
+      const tradesRes = await fetch(
+        `https://api.geckoterminal.com/api/v2/networks/base/pools/${poolAddress}/trades?token=base`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!tradesRes.ok) {
+        const body = await tradesRes.text();
+        setFetchError(`trades ${tradesRes.status}: ${body.slice(0, 80)}`);
+        return;
+      }
+      const tradesJson = await tradesRes.json();
+      setTrades((tradesJson.data ?? []).map((d: any) => d.attributes));
+      setFetchError(null);
+    } catch (e: any) {
+      setFetchError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [tokenAddress]);
+
+  useEffect(() => {
+    fetchTrades();
+    const id = setInterval(fetchTrades, 20_000);
+    return () => clearInterval(id);
+  }, [fetchTrades]);
+
+  const COLS = '60px 1fr 100px 70px 50px';
+
+  if (loading) return (
+    <div className={styles.recentTrades}>
+      <div className={styles.recentTradesHeader}>Recent Trades</div>
+      <div style={{ padding: '10px 16px', color: 'rgba(136,153,187,0.5)', fontSize: '0.72rem' }}>Loading…</div>
+    </div>
+  );
+
+  return (
+    <div className={styles.recentTrades}>
+      <div className={styles.recentTradesHeader} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Recent Trades</span>
+        <span style={{ color: 'rgba(136,153,187,0.35)', fontSize: '0.6rem', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+          auto-refresh 20s
+        </span>
+      </div>
+      {fetchError && (
+        <div style={{ padding: '8px 16px', color: '#e74c3c', fontSize: '0.7rem' }}>{fetchError}</div>
+      )}
+      {!trades.length && !fetchError && (
+        <div style={{ padding: '10px 16px', color: 'rgba(136,153,187,0.4)', fontSize: '0.72rem' }}>No trades yet</div>
+      )}
+      {trades.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: COLS, padding: '4px 16px', gap: 8 }}>
+          <span className={styles.recentTradesCol}>Type</span>
+          <span className={styles.recentTradesCol}>Wallet</span>
+          <span className={styles.recentTradesCol} style={{ textAlign: 'right' }}>Amount</span>
+          <span className={styles.recentTradesCol} style={{ textAlign: 'right' }}>USD</span>
+          <span className={styles.recentTradesCol} style={{ textAlign: 'right' }}>Age</span>
+        </div>
+      )}
+      {trades.map((t) => {
+        const isBuy = t.kind === 'buy';
+        const tokenAmt = isBuy ? t.to_token_amount : t.from_token_amount;
+        const usd = parseFloat(t.volume_in_usd ?? '0');
+        return (
+          <a
+            key={t.tx_hash}
+            href={`https://basescan.org/tx/${t.tx_hash}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{ display: 'grid', gridTemplateColumns: COLS, padding: '7px 16px', gap: 8, borderTop: '1px solid rgba(0,212,170,0.04)', alignItems: 'center', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span className={styles.tradeType} style={{ color: isBuy ? '#2ecc71' : '#e74c3c' }}>
+              {isBuy ? 'BUY' : 'SELL'}
+            </span>
+            <span className={styles.tradeWallet}>{shortAddr(t.tx_from_address)}</span>
+            <span className={styles.tradeAmount} style={{ textAlign: 'right' }}>
+              {fmtAmt(tokenAmt)} <span style={{ color, fontSize: '0.58rem' }}>${ticker}</span>
+            </span>
+            <span className={styles.tradePrice} style={{ textAlign: 'right' }}>
+              ${usd < 0.01 ? usd.toFixed(4) : usd.toFixed(2)}
+            </span>
+            <span className={styles.tradeTime} style={{ textAlign: 'right' }}>{secsAgo(t.block_timestamp)}</span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Chart ────────────────────────────────────────────────────────────────────
 function DexChart({ tokenAddress }: { tokenAddress: string }) {
   return (
     <iframe
-      src={`https://www.geckoterminal.com/base/tokens/${tokenAddress}?embed=1&info=0&swaps=0`}
+      src={`https://www.geckoterminal.com/base/tokens/${tokenAddress}?embed=1&info=0&swaps=0&bg_color=0a1628&chart_type=price`}
       style={{ width: '100%', height: '100%', border: 'none', borderRadius: 8 }}
       title="DEX Chart"
     />
@@ -75,6 +220,99 @@ function NoChart({ color }: { color: string }) {
       <span style={{ fontSize: '0.75rem', color }}>Add liquidity to enable trading</span>
     </div>
   );
+}
+
+// ─── Tx Progress Modal ────────────────────────────────────────────────────────
+type StepStatus = 'idle' | 'waiting' | 'pending' | 'done' | 'error';
+interface TxStep { label: string; status: StepStatus; detail?: string; }
+
+function TxModal({ steps, visible, onClose }: { steps: TxStep[]; visible: boolean; onClose: () => void }) {
+  if (!visible) return null;
+  if (typeof document === 'undefined') return null;
+  const allDone = steps.every(s => s.status === 'done');
+  const hasError = steps.some(s => s.status === 'error');
+  const canClose = allDone || hasError;
+
+  const iconFor = (s: TxStep, i: number) => {
+    if (s.status === 'done')    return <span style={{ color: '#2ecc71', fontSize: '1rem' }}>✓</span>;
+    if (s.status === 'error')   return <span style={{ color: '#e74c3c', fontSize: '1rem' }}>✗</span>;
+    if (s.status === 'waiting' || s.status === 'pending') return (
+      <span style={{
+        display: 'inline-block', width: 16, height: 16, border: '2px solid rgba(0,212,170,0.3)',
+        borderTopColor: '#00d4aa', borderRadius: '50%',
+        animation: 'txSpin 0.8s linear infinite',
+      }} />
+    );
+    return <span style={{ color: 'rgba(136,153,187,0.4)', fontSize: '0.75rem', fontWeight: 700 }}>{i + 1}</span>;
+  };
+
+  const detailFor = (s: TxStep) => {
+    if (s.detail) return s.detail;
+    if (s.status === 'waiting') return 'Confirm in wallet…';
+    if (s.status === 'pending') return 'Waiting for confirmation…';
+    if (s.status === 'done')    return 'Done';
+    return null;
+  };
+
+  const modal = (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(5,10,20,0.75)', backdropFilter: 'blur(4px)',
+    }}>
+      <div style={{
+        background: '#0d1f3c', border: '1px solid rgba(0,212,170,0.2)',
+        borderRadius: 16, padding: '28px 28px 20px', width: 320, boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(136,153,187,0.6)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 20 }}>
+          {allDone ? '✓ Complete' : hasError ? 'Failed' : 'Processing…'}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'flex-start', gap: 14,
+              padding: '10px 0',
+              borderBottom: i < steps.length - 1 ? '1px solid rgba(0,212,170,0.06)' : 'none',
+              opacity: s.status === 'idle' ? 0.4 : 1,
+              transition: 'opacity 0.2s',
+            }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1,
+                background: s.status === 'done' ? 'rgba(46,204,113,0.12)'
+                  : s.status === 'error' ? 'rgba(231,76,60,0.12)'
+                  : 'rgba(0,212,170,0.08)',
+                border: `1px solid ${s.status === 'done' ? 'rgba(46,204,113,0.3)' : s.status === 'error' ? 'rgba(231,76,60,0.3)' : 'rgba(0,212,170,0.2)'}`,
+              }}>
+                {iconFor(s, i)}
+              </div>
+              <div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: s.status === 'error' ? '#e74c3c' : s.status === 'done' ? '#2ecc71' : '#cdd6f4' }}>
+                  {s.label}
+                </div>
+                {detailFor(s) && (
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(136,153,187,0.6)', marginTop: 2 }}>
+                    {detailFor(s)}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {canClose && (
+          <button onClick={onClose} style={{
+            marginTop: 20, width: '100%', padding: '10px', borderRadius: 10,
+            background: allDone ? 'rgba(46,204,113,0.12)' : 'rgba(231,76,60,0.1)',
+            border: `1px solid ${allDone ? 'rgba(46,204,113,0.3)' : 'rgba(231,76,60,0.3)'}`,
+            color: allDone ? '#2ecc71' : '#e74c3c',
+            fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer',
+          }}>
+            {allDone ? 'Done' : 'Dismiss'}
+          </button>
+        )}
+      </div>
+      <style>{`@keyframes txSpin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+  return createPortal(modal, document.body);
 }
 
 // ─── Swap Panel ───────────────────────────────────────────────────────────────
@@ -101,6 +339,20 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
   const [tab, setTab] = useState<'buy' | 'sell'>('buy');
   const [amount, setAmount] = useState('');
   const [slippage, setSlippage] = useState('1.0');
+  const [ethPrice, setEthPrice] = useState<number | null>(null);
+  const [txSteps, setTxSteps] = useState<TxStep[]>([]);
+  const [showTxModal, setShowTxModal] = useState(false);
+
+  const setStep = useCallback((idx: number, update: Partial<TxStep>) =>
+    setTxSteps(prev => prev.map((s, i) => i === idx ? { ...s, ...update } : s)), []);
+
+  // Fetch ETH price once on mount
+  useEffect(() => {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+      .then(r => r.json())
+      .then(j => setEthPrice(j?.ethereum?.usd ?? null))
+      .catch(() => {});
+  }, []);
   const [quote, setQuote] = useState<{ amountOut: bigint } | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -110,6 +362,18 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
 
   const { isLoading: txPending, isSuccess: txSuccess } = useWaitForTransactionReceipt({ hash: txHash });
 
+  // When tx confirms on-chain → mark last step done, auto-dismiss after 3s
+  useEffect(() => {
+    if (!txSuccess) return;
+    setTxSteps(prev => prev.map((s, i) => i === prev.length - 1 ? { ...s, status: 'done' } : s));
+    const t = setTimeout(() => { setTxHash(undefined); setShowTxModal(false); }, 3000);
+    return () => clearTimeout(t);
+  }, [txSuccess]);
+
+  // Clear success on any form interaction
+  const setAmountAndClear = useCallback((v: string) => { setTxHash(undefined); setAmount(v); }, []);
+  const setSlippageAndClear = useCallback((v: string) => { setTxHash(undefined); setSlippage(v); }, []);
+
   // Token balance
   const { data: tokenBalance } = useReadContract({
     address: tokenAddress, abi: erc20Abi,
@@ -117,11 +381,17 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
     query: { enabled: !!address },
   });
 
-  // Router allowance (for sell)
+  // Sell approvals: ERC20 → Permit2, then Permit2 → UniversalRouter
   const addresses = getAddresses(base.id);
-  const { data: routerAllowance, refetch: refetchAllowance } = useReadContract({
+  const universalRouter = addresses.universalRouter as `0x${string}`;
+  const { data: permit2Allowance, refetch: refetchPermit2Allow } = useReadContract({
     address: tokenAddress, abi: erc20Abi,
-    functionName: 'allowance', args: [address!, addresses.universalRouter as `0x${string}`],
+    functionName: 'allowance', args: [address!, PERMIT2],
+    query: { enabled: !!address && tab === 'sell' },
+  });
+  const { data: permit2RouterAllowance, refetch: refetchP2RouterAllow } = useReadContract({
+    address: PERMIT2, abi: PERMIT2_ABI,
+    functionName: 'allowance', args: [address!, tokenAddress, universalRouter],
     query: { enabled: !!address && tab === 'sell' },
   });
 
@@ -162,34 +432,71 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
 
   const handleSwap = useCallback(async () => {
     if (!quote || !address) return;
-    setSwapLoading(true); setSwapError(null); setTxHash(undefined);
-    try {
-      // currency0=token, currency1=WETH
-      // buy:  wrap ETH→WETH, swap WETH→token (zeroForOne=false)
-      // sell: swap token→WETH (zeroForOne=true), unwrap WETH→ETH
-      const zeroForOne  = tab === 'sell';
-      const amountIn    = tab === 'buy' ? parseEther(amount) : parseUnits(amount, 18);
-      const amountOutMin = slippageMin(quote.amountOut, slippage);
-      const universalRouter = addresses.universalRouter as `0x${string}`;
+    setSwapError(null); setTxHash(undefined);
 
-      // Approve router if selling
-      if (tab === 'sell') {
-        const allowance = (routerAllowance as bigint) ?? 0n;
-        if (allowance < amountIn) {
-          await writeContractAsync({
-            address: tokenAddress, abi: erc20Abi,
-            functionName: 'approve', args: [universalRouter, maxUint256],
-            chainId: base.id,
-          });
-          await refetchAllowance();
-        }
+    const amountIn     = tab === 'buy' ? parseEther(amount) : parseUnits(amount, 18);
+    const amountOutMin = slippageMin(quote.amountOut, slippage);
+
+    // For sell: always show all 4 steps, mark already-approved ones as done immediately
+    const [p2Amt] = (permit2RouterAllowance as [bigint, number, number]) ?? [0n, 0, 0];
+    const needsPermit2 = tab === 'sell' && ((permit2Allowance as bigint) ?? 0n) < amountIn;
+    const needsRouter  = tab === 'sell' && ((p2Amt as bigint) ?? 0n) < amountIn;
+
+    const steps: TxStep[] = tab === 'sell' ? [
+      { label: 'Approve token for Permit2',   status: needsPermit2 ? 'idle' : 'done', detail: needsPermit2 ? undefined : 'Already approved' },
+      { label: 'Approve router via Permit2',  status: needsRouter  ? 'idle' : 'done', detail: needsRouter  ? undefined : 'Already approved' },
+      { label: 'Sell tokens',                 status: 'idle' },
+      { label: 'Confirming on Base',          status: 'idle' },
+    ] : [
+      { label: 'Buy tokens',        status: 'idle' },
+      { label: 'Confirming on Base', status: 'idle' },
+    ];
+
+    const approvePermit2Idx = tab === 'sell' ? 0 : -1;
+    const approveRouterIdx  = tab === 'sell' ? 1 : -1;
+    const swapIdx           = tab === 'sell' ? 2 : 0;
+    const confirmIdx        = tab === 'sell' ? 3 : 1;
+
+    setTxSteps(steps);
+    setShowTxModal(true);
+    setSwapLoading(true);
+
+    const upd = (idx: number, update: Partial<TxStep>) =>
+      setTxSteps(prev => prev.map((s, i) => i === idx ? { ...s, ...update } : s));
+
+    try {
+      // ── Approvals (sell only, if needed) ─────────────────────────────────────
+      if (needsPermit2) {
+        upd(approvePermit2Idx, { status: 'waiting' });
+        await writeContractAsync({
+          address: tokenAddress, abi: erc20Abi,
+          functionName: 'approve', args: [PERMIT2, maxUint256], chainId: base.id,
+        });
+        upd(approvePermit2Idx, { status: 'pending' });
+        await refetchPermit2Allow();
+        upd(approvePermit2Idx, { status: 'done' });
       }
+
+      if (needsRouter) {
+        upd(approveRouterIdx, { status: 'waiting' });
+        await writeContractAsync({
+          address: PERMIT2, abi: PERMIT2_ABI,
+          functionName: 'approve',
+          args: [tokenAddress, universalRouter, 2n**160n - 1n, 281474976710655],
+          chainId: base.id,
+        });
+        upd(approveRouterIdx, { status: 'pending' });
+        await refetchP2RouterAllow();
+        upd(approveRouterIdx, { status: 'done' });
+      }
+
+      // ── Swap ─────────────────────────────────────────────────────────────────
+      upd(swapIdx, { status: 'waiting' });
 
       let commands: `0x${string}`;
       let inputs: `0x${string}`[];
 
       if (tab === 'buy') {
-        // WRAP_ETH puts WETH in router → SETTLE(payerIsUser=false) pulls from router balance
         const [actions, params] = new V4ActionBuilder()
           .addSwapExactInSingle(poolKey, false, amountIn, amountOutMin, '0x')
           .addAction(V4ActionType.SETTLE, [WETH, amountIn, false])
@@ -200,7 +507,6 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
           .addV4Swap(actions, params)
           .build();
       } else {
-        // User approved router for token → SETTLE(payerIsUser=false) after router pulls tokens
         const [actions, params] = new V4ActionBuilder()
           .addSwapExactInSingle(poolKey, true, amountIn, amountOutMin, '0x')
           .addAction(V4ActionType.SETTLE, [poolKey.currency0, amountIn, true])
@@ -214,23 +520,26 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
 
       const hash = await sendTransactionAsync({
         to: universalRouter,
-        data: encodeFunctionData({
-          abi: UNIVERSAL_ROUTER_ABI,
-          functionName: 'execute',
-          args: [commands, inputs],
-        }),
+        data: encodeFunctionData({ abi: UNIVERSAL_ROUTER_ABI, functionName: 'execute', args: [commands, inputs] }),
         value: tab === 'buy' ? amountIn : 0n,
         chainId: base.id,
       });
+
+      upd(swapIdx, { status: 'done' });
+      upd(confirmIdx, { status: 'pending' });
       setTxHash(hash);
     } catch (e: any) {
       const msg = e.shortMessage ?? e.message ?? 'Transaction failed';
       console.error('[swap]', e);
+      // Mark currently-active step as error
+      setTxSteps(prev => prev.map(s =>
+        s.status === 'waiting' || s.status === 'pending' ? { ...s, status: 'error', detail: msg } : s
+      ));
       setSwapError(msg);
     } finally {
       setSwapLoading(false);
     }
-  }, [quote, address, tab, amount, slippage, tokenAddress, routerAllowance, addresses, sendTransactionAsync, writeContractAsync, refetchAllowance]);
+  }, [quote, address, tab, amount, slippage, tokenAddress, permit2Allowance, permit2RouterAllowance, universalRouter, sendTransactionAsync, writeContractAsync, refetchPermit2Allow, refetchP2RouterAllow, poolKey]);
 
   const receivedFmt = quote
     ? tab === 'buy'
@@ -239,6 +548,8 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
     : null;
 
   return (
+    <>
+    <TxModal steps={txSteps} visible={showTxModal} onClose={() => setShowTxModal(false)} />
     <div className={styles.tradePanelInner} style={{ borderColor: `${color}30` }}>
       {/* Wallet */}
       <div className={styles.walletRow}>
@@ -271,7 +582,7 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
               borderColor: t === 'buy' ? '#2ecc71' : '#e74c3c',
               background: t === 'buy' ? 'rgba(46,204,113,0.08)' : 'rgba(231,76,60,0.08)',
             } : {}}
-            onClick={() => { setTab(t); setAmount(''); setQuote(null); }}
+            onClick={() => { setTab(t); setAmount(''); setQuote(null); setTxHash(undefined); setSwapError(null); }}
           >{t === 'buy' ? 'Buy' : 'Sell'}</button>
         ))}
       </div>
@@ -289,17 +600,37 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
         <label className={styles.inputLabel}>Amount ({tab === 'buy' ? 'ETH' : `$${ticker}`})</label>
         <div className={styles.inputWrap}>
           <input type="number" className={styles.tradeInput} placeholder="0.00"
-            value={amount} onChange={(e) => setAmount(e.target.value)} min="0" />
+            value={amount} onChange={(e) => setAmountAndClear(e.target.value)} min="0" />
           {tab === 'sell' && tokenBalance && (
-            <button className={styles.maxBtn} onClick={() => setAmount(tokenBalanceFmt)}>MAX</button>
+            <button className={styles.maxBtn} onClick={() => setAmountAndClear(tokenBalanceFmt)}>MAX</button>
           )}
         </div>
       </div>
 
       {tab === 'buy' && (
         <div className={styles.quickAmounts}>
-          {['0.01', '0.05', '0.1', '0.5'].map((v) => (
-            <button key={v} className={styles.quickBtn} onClick={() => setAmount(v)}>{v} ETH</button>
+          {[3, 5, 10, 50].map((usd) => {
+            const eth = ethPrice ? (usd / ethPrice).toFixed(6) : null;
+            return (
+              <button key={usd} className={styles.quickBtn}
+                disabled={!eth}
+                onClick={() => eth && setAmountAndClear(eth)}
+                title={eth ? `≈ ${eth} ETH` : 'Loading price…'}
+              >
+                ~${usd}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === 'sell' && tokenBalance && (
+        <div className={styles.quickAmounts}>
+          {[25, 50, 75, 100].map((pct) => (
+            <button key={pct} className={styles.quickBtn}
+              onClick={() => setAmountAndClear((parseFloat(tokenBalanceFmt) * pct / 100).toFixed(2))}>
+              {pct}%
+            </button>
           ))}
         </div>
       )}
@@ -311,10 +642,10 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
           {['0.5', '1.0', '2.0'].map((v) => (
             <button key={v} className={`${styles.slipBtn} ${slippage === v ? styles.slipBtnActive : ''}`}
               style={slippage === v ? { borderColor: color, color } : {}}
-              onClick={() => setSlippage(v)}>{v}%</button>
+              onClick={() => setSlippageAndClear(v)}>{v}%</button>
           ))}
           <input className={styles.slipInput} value={slippage}
-            onChange={(e) => setSlippage(e.target.value)} placeholder="Custom" />
+            onChange={(e) => setSlippageAndClear(e.target.value)} placeholder="Custom" />
         </div>
       </div>
 
@@ -371,6 +702,7 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
         Powered by <span>Doppler · Uniswap V4</span> · Base
       </p>
     </div>
+    </>
   );
 }
 
@@ -507,15 +839,7 @@ export default function AgentTradePage({ params }: Props) {
             {isDeployed ? <DexChart tokenAddress={agent.tokenAddress!} /> : <NoChart color={color} />}
           </div>
           {isDeployed && (
-            <div className={styles.recentTrades}>
-              <div className={styles.recentTradesHeader}>On-chain</div>
-              <div style={{ display: 'flex', gap: 16, padding: '8px 0' }}>
-                <a href={`https://basescan.org/token/${agent.tokenAddress}`} target="_blank" rel="noopener noreferrer"
-                  style={{ color: '#00d4aa', fontSize: '0.82rem', textDecoration: 'none' }}>BaseScan ↗</a>
-                <a href={`https://www.geckoterminal.com/base/tokens/${agent.tokenAddress}`} target="_blank" rel="noopener noreferrer"
-                  style={{ color: '#00d4aa', fontSize: '0.82rem', textDecoration: 'none' }}>GeckoTerminal ↗</a>
-              </div>
-            </div>
+            <RecentTrades tokenAddress={agent.tokenAddress!} ticker={ticker} color={color} />
           )}
         </main>
 
