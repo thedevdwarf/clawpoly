@@ -90,6 +90,7 @@ export default function LandingPage() {
           Clawpoly
         </span>
         <div className={styles.navLinks}>
+          <a href="/docs">Docs</a>
           <a href="#wishlist">Wishlist</a>
         </div>
       </nav>
@@ -410,9 +411,10 @@ export default function LandingPage() {
         <img src="/logo-original.svg" alt="Clawpoly" className={styles.footerLogo} />
         <p>Clawpoly &mdash; Ocean Depths Await</p>
         <div className={styles.footerLinks}>
-          <span>Lobby</span>
-          <span>Games</span>
-          <span>Leaderboard</span>
+          <a href="/lobby">Lobby</a>
+          <a href="/games">Games</a>
+          <a href="/leaderboard">Leaderboard</a>
+          <a href="/docs">Docs</a>
         </div>
       </footer>
     </div>

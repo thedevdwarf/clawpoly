@@ -1,0 +1,219 @@
+@use '@/styles/variables' as *;
+
+// Shared styles for all docs content pages
+
+.page {
+  h1 {
+    font-size: $font-size-xxl;
+    font-weight: 700;
+    color: $text-primary;
+    margin: 0 0 12px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: $font-size-xl;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba($accent-teal, 0.15);
+  }
+
+  h3 {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 32px 0 12px;
+  }
+
+  p {
+    font-size: $font-size-md;
+    color: $text-secondary;
+    line-height: 1.75;
+    margin: 0 0 16px;
+  }
+
+  a {
+    color: $accent-teal;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  strong {
+    color: $text-primary;
+    font-weight: 600;
+  }
+
+  ul, ol {
+    margin: 0 0 20px 20px;
+    color: $text-secondary;
+    line-height: 1.8;
+
+    li {
+      font-size: $font-size-md;
+      margin-bottom: 4px;
+    }
+  }
+
+  code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.875em;
+    background: rgba($accent-teal, 0.08);
+    color: $accent-teal;
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+  }
+
+  pre {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba($accent-teal, 0.15);
+    border-radius: $radius-md;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 0 0 24px;
+
+    code {
+      background: none;
+      padding: 0;
+      font-size: $font-size-sm;
+      color: #a8d8c8;
+    }
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0 0 28px;
+    font-size: $font-size-sm;
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      background: rgba($surface, 0.8);
+      color: $text-primary;
+      font-weight: 600;
+      border-bottom: 1px solid rgba($accent-teal, 0.2);
+    }
+
+    td {
+      padding: 10px 14px;
+      color: $text-secondary;
+      border-bottom: 1px solid rgba($accent-teal, 0.07);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid rgba($accent-teal, 0.12);
+    margin: 40px 0;
+  }
+}
+
+.lead {
+  font-size: $font-size-lg;
+  color: $text-secondary;
+  line-height: 1.7;
+  margin: 0 0 32px;
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 32px 0;
+
+  @media (max-width: $breakpoint-md) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  display: block;
+  background: rgba($surface, 0.6);
+  border: 1px solid rgba($accent-teal, 0.15);
+  border-radius: $radius-md;
+  padding: 24px;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:hover {
+    border-color: rgba($accent-teal, 0.4);
+    background: rgba($surface, 0.9);
+    text-decoration: none;
+  }
+
+  .cardTitle {
+    font-size: $font-size-md;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 6px;
+  }
+
+  .cardDesc {
+    font-size: $font-size-sm;
+    color: $text-secondary;
+    line-height: 1.6;
+  }
+
+  .cardArrow {
+    display: block;
+    margin-top: 16px;
+    font-size: $font-size-sm;
+    color: $accent-teal;
+  }
+}
+
+.note {
+  background: rgba($accent-teal, 0.06);
+  border-left: 3px solid $accent-teal;
+  border-radius: 0 $radius-sm $radius-sm 0;
+  padding: 14px 18px;
+  margin: 0 0 24px;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: 1.6;
+
+  strong {
+    color: $accent-teal;
+  }
+}
+
+.stepList {
+  counter-reset: steps;
+  list-style: none;
+  margin: 0 0 32px;
+  padding: 0;
+
+  li {
+    counter-increment: steps;
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    font-size: $font-size-md;
+    color: $text-secondary;
+
+    &::before {
+      content: counter(steps);
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      background: rgba($accent-teal, 0.15);
+      color: $accent-teal;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: $font-size-xs;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+  }
+}
