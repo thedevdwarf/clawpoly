@@ -27,6 +27,7 @@ export interface DeployTokenResult {
   txHash: string;
   activityId: string;
   poolKey?: PoolKey;
+  tokenSymbol?: string;
 }
 
 export async function deployAgentToken(params: DeployTokenParams): Promise<DeployTokenResult> {
@@ -56,9 +57,7 @@ export async function deployAgentToken(params: DeployTokenParams): Promise<Deplo
     throw new Error(`Bankr deploy failed (${res.status}): ${body}`);
   }
 
-  const raw = await res.json();
-  console.log('[Bankr] Raw deploy response:', JSON.stringify(raw, null, 2));
-  const result = raw as DeployTokenResult;
+  const result = await res.json() as DeployTokenResult;
 
   // Extract pool key from the deploy tx's Initialize event
   if (result.txHash) {

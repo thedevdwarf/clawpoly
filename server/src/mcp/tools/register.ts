@@ -78,18 +78,17 @@ export function registerTools(server: McpServer): void {
         });
 
         // Deploy token on Base via Bankr Partner API
-        const resolvedSymbol = symbol ?? name.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 5);
         let tokenInfo: { status: string; address?: string; symbol?: string; txHash?: string; poolId?: string } = { status: 'failed' };
         try {
           const result = await deployAgentToken({
             tokenName: name,
-            tokenSymbol: resolvedSymbol,
+            ...(symbol && { tokenSymbol: symbol }),
             feeRecipient: { type: 'wallet', value: feeWallet },
           });
 
           await AgentModel.updateOne({ agentId }, {
             tokenAddress: result.tokenAddress,
-            tokenSymbol: resolvedSymbol,
+            tokenSymbol: result.tokenSymbol ?? symbol ?? null,
             tokenPoolId: result.poolId,
             tokenTxHash: result.txHash,
             tokenStatus: 'deployed',
@@ -99,7 +98,7 @@ export function registerTools(server: McpServer): void {
           tokenInfo = {
             status: 'deployed',
             address: result.tokenAddress,
-            symbol: resolvedSymbol,
+            symbol: symbol ?? undefined,
             txHash: result.txHash,
             poolId: result.poolId,
           };
