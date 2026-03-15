@@ -326,7 +326,7 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
         tickSpacing: agent.tokenPoolKey.tickSpacing,
         hooks: agent.tokenPoolKey.hooks as `0x${string}`,
       }
-    : { currency0: tokenAddress, currency1: WETH, fee: DYNAMIC_FEE_FLAG, tickSpacing: 200, hooks: '0xbb7784a4d481184283ed89619a3e3ed143e1adc0' as `0x${string}` };
+    : { currency0: WETH, currency1: tokenAddress, fee: DYNAMIC_FEE_FLAG, tickSpacing: 200, hooks: '0xbb7784a4d481184283ed89619a3e3ed143e1adc0' as `0x${string}` };
   const { address, isConnected, chain } = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -411,10 +411,11 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
     const timer = setTimeout(async () => {
       setQuoteLoading(true); setQuoteError(null);
       try {
-        // currency0=token, currency1=WETH
-        // buy:  WETH→token → zeroForOne=false (currency1→currency0)
-        // sell: token→WETH → zeroForOne=true  (currency0→currency1)
-        const zeroForOne = tab === 'sell';
+        // Bankr sorts currencies by address: WETH (0x4200...) < token → currency0=WETH, currency1=token
+        // buy:  WETH→token → zeroForOne=true  (currency0→currency1)
+        // sell: token→WETH → zeroForOne=false (currency1→currency0)
+        const wethIsCurrency0 = poolKey.currency0.toLowerCase() === WETH.toLowerCase();
+        const zeroForOne = tab === 'buy' ? wethIsCurrency0 : !wethIsCurrency0;
         const exactAmount = tab === 'buy' ? parseEther(amount) : parseUnits(amount, 18);
         const { amountOut } = await quoterRef.current!.quoteExactInputV4Quoter({
           poolKey, zeroForOne, exactAmount, hookData: '0x',
@@ -496,20 +497,25 @@ function SwapPanel({ agent, color, ticker }: { agent: AgentData; color: string; 
       let commands: `0x${string}`;
       let inputs: `0x${string}`[];
 
+      const wethIsCurrency0 = poolKey.currency0.toLowerCase() === WETH.toLowerCase();
+      const tokenCurrency = (wethIsCurrency0 ? poolKey.currency1 : poolKey.currency0) as `0x${string}`;
+
       if (tab === 'buy') {
+        const buyZeroForOne = wethIsCurrency0; // sell WETH(c0)→token(c1) when WETH is c0
         const [actions, params] = new V4ActionBuilder()
-          .addSwapExactInSingle(poolKey, false, amountIn, amountOutMin, '0x')
+          .addSwapExactInSingle(poolKey, buyZeroForOne, amountIn, amountOutMin, '0x')
           .addAction(V4ActionType.SETTLE, [WETH, amountIn, false])
-          .addAction(V4ActionType.TAKE_ALL, [poolKey.currency0, 0n])
+          .addAction(V4ActionType.TAKE_ALL, [tokenCurrency, 0n])
           .build();
         [commands, inputs] = new CommandBuilder()
           .addWrapEth(universalRouter, amountIn)
           .addV4Swap(actions, params)
           .build();
       } else {
+        const sellZeroForOne = !wethIsCurrency0; // sell token(c1)→WETH(c0) when WETH is c0
         const [actions, params] = new V4ActionBuilder()
-          .addSwapExactInSingle(poolKey, true, amountIn, amountOutMin, '0x')
-          .addAction(V4ActionType.SETTLE, [poolKey.currency0, amountIn, true])
+          .addSwapExactInSingle(poolKey, sellZeroForOne, amountIn, amountOutMin, '0x')
+          .addAction(V4ActionType.SETTLE, [tokenCurrency, amountIn, true])
           .addAction(V4ActionType.TAKE_ALL, [WETH, 0n])
           .build();
         [commands, inputs] = new CommandBuilder()
@@ -737,7 +743,7 @@ export default function AgentTradePage({ params }: Props) {
   const tokenType = tokenTypeFromId(agentId);
   const color = TOKEN_COLOR[tokenType];
   const emoji = TOKEN_EMOJI[tokenType];
-  const ticker = agent.tokenSymbol ?? 'ORCL';
+  const ticker = agent.tokenSymbol ?? '';
   const winRate = Math.round((agent.stats?.winRate ?? 0) * 100) / 100;
   const losses = (agent.stats?.gamesPlayed ?? 0) - (agent.stats?.wins ?? 0);
   const isDeployed = agent.tokenStatus === 'deployed' && !!agent.tokenAddress;

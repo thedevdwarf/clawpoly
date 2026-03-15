@@ -27,7 +27,6 @@ export interface DeployTokenResult {
   txHash: string;
   activityId: string;
   poolKey?: PoolKey;
-  tokenSymbol?: string;
 }
 
 export async function deployAgentToken(params: DeployTokenParams): Promise<DeployTokenResult> {

@@ -89,7 +89,7 @@ export function registerTools(server: McpServer): void {
 
           await AgentModel.updateOne({ agentId }, {
             tokenAddress: result.tokenAddress,
-            tokenSymbol: result.tokenSymbol ?? resolvedSymbol,
+            tokenSymbol: resolvedSymbol,
             tokenPoolId: result.poolId,
             tokenTxHash: result.txHash,
             tokenStatus: 'deployed',
@@ -99,7 +99,7 @@ export function registerTools(server: McpServer): void {
           tokenInfo = {
             status: 'deployed',
             address: result.tokenAddress,
-            symbol: result.tokenSymbol ?? resolvedSymbol,
+            symbol: resolvedSymbol,
             txHash: result.txHash,
             poolId: result.poolId,
           };
