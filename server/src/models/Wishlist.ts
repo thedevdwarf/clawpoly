@@ -13,6 +13,4 @@ const WishlistSchema = new Schema<IWishlist>(
   { timestamps: false }
 );
 
-WishlistSchema.index({ email: 1 }, { unique: true });
-
 export const WishlistModel = mongoose.model<IWishlist>('Wishlist', WishlistSchema);
