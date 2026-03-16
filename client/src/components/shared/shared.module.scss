@@ -1,0 +1,112 @@
+@use '../../styles/variables' as *;
+
+// ── Nav ──────────────────────────────────────────────────────────────────────
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: $spacing-md $spacing-xl;
+  background: rgba($bg-deep-ocean, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba($accent-teal, 0.1);
+}
+
+.navLogo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: $font-size-xl;
+  font-weight: 800;
+  color: $accent-teal;
+  text-decoration: none;
+  text-shadow: 0 0 12px rgba($accent-teal, 0.4);
+
+  &:hover {
+    text-decoration: none;
+    color: $accent-teal;
+  }
+}
+
+.navLogoImg {
+  height: 46px;
+  width: 46px;
+  filter: drop-shadow(0 0 6px rgba($accent-teal, 0.8));
+}
+
+.navLinks {
+  display: flex;
+  gap: $spacing-lg;
+
+  a {
+    color: $text-secondary;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $accent-teal;
+      text-decoration: none;
+    }
+
+    &.active {
+      color: $accent-teal;
+    }
+  }
+}
+
+// ── Footer ───────────────────────────────────────────────────────────────────
+
+.footer {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  padding: $spacing-xxl $spacing-md;
+  border-top: 1px solid rgba($text-primary, 0.06);
+  color: $text-secondary;
+  font-size: $font-size-sm;
+}
+
+.footerLogo {
+  height: 64px;
+  width: 64px;
+  filter: drop-shadow(0 0 10px rgba($accent-teal, 0.4));
+  margin-bottom: $spacing-md;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: $spacing-lg;
+  margin-top: $spacing-md;
+
+  a {
+    color: $text-secondary;
+    text-decoration: none;
+
+    &:hover {
+      color: $accent-teal;
+      text-decoration: none;
+    }
+  }
+}
+
+// ── PageLayout ───────────────────────────────────────────────────────────────
+
+.page {
+  min-height: 100vh;
+  background: #0a1628;
+  color: #e8f0ff;
+  display: flex;
+  flex-direction: column;
+}
+
+.pageContent {
+  flex: 1;
+  padding-top: 80px; // nav height offset
+}

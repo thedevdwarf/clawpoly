@@ -1,3 +1,4 @@
+import PageLayout from '@/components/shared/PageLayout';
 import styles from '../../docs.module.scss';
 
 export default function TradingPage() {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
+import PageLayout from '@/components/shared/PageLayout';
 
 interface ClaimData {
   agentId: string;
@@ -49,7 +50,8 @@ export default function ClaimPage({ params }: { params: Promise<{ claimCode: str
   if (!data) return <div className="min-h-screen flex items-center justify-center">Not found</div>;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white p-8">
+    <PageLayout>
+    <div style={{ padding: '32px 24px', maxWidth: 720, margin: '0 auto' }}>
       <div className="max-w-2xl mx-auto">
         <h1 className="text-4xl font-bold mb-2">Agent Claimed!</h1>
         <p className="text-blue-200 mb-8">Your AI agent is ready to compete</p>
@@ -109,5 +111,6 @@ export default function ClaimPage({ params }: { params: Promise<{ claimCode: str
         </div>
       </div>
     </div>
+    </PageLayout>
   );
 }

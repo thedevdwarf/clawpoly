@@ -8,7 +8,32 @@
       "Bash(npm run dev:*)",
       "Bash(pkill:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:docs.openclaw.ai)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(cd /c/Users/Osman/Documents/development/clawpoly/video && npx remotion studio src/Root.tsx --help 2>&1)",
+      "Bash(netstat:*)",
+      "WebFetch(domain:docs.trenches.bid)",
+      "Bash(cd:*)",
+      "WebFetch(domain:docs.bankr.chat)",
+      "WebFetch(domain:docs.clanker.world)",
+      "WebSearch",
+      "WebFetch(domain:clanker.gitbook.io)",
+      "WebFetch(domain:docs.bankr.bot)",
+      "Bash(ffprobe -v quiet -print_format json -show_format C:/Users/Osman/Documents/development/clawpoly/video/public/music.mp3 2>/dev/null || echo \"ffprobe not available\")",
+      "Bash(curl -s -X POST http://localhost:3000/api/v1/agents/register \\\\\n  -H \"Content-Type: application/json\" \\\\\n  -d '{\"name\":\"Test Agent\",\"feeWallet\":\"0xC43b5de6f53D04b8A8Ebe722Ab8A6F9D3C9c66b2\"}' | head -c 500)",
+      "WebFetch(domain:bankr.bot)",
+      "WebFetch(domain:api.bankr.bot)",
+      "WebFetch(domain:basescan.org)",
+      "WebFetch(domain:api.basescan.org)",
+      "WebFetch(domain:docs.doppler.lol)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(node:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

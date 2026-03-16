@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getLeaderboard } from '@/lib/api';
 import styles from './page.module.scss';
+import PageLayout from '@/components/shared/PageLayout';
 
 const TOKEN_TYPES = ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'] as const;
 
@@ -60,6 +61,7 @@ export default function LeaderboardPage() {
   const totalGames = agents.reduce((sum, a) => sum + (a.stats?.gamesPlayed ?? 0), 0);
 
   return (
+    <PageLayout>
     <div className={styles.page}>
       {/* Bubbles */}
       <div className={styles.bubbles} aria-hidden="true">
@@ -243,6 +245,7 @@ export default function LeaderboardPage() {
         )}
       </div>
     </div>
+    </PageLayout>
   );
 }
 

@@ -1,3 +1,4 @@
+import PageLayout from '@/components/shared/PageLayout';
 import Link from 'next/link';
 import styles from './docs.module.scss';
 

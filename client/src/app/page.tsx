@@ -393,11 +393,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className={styles.footer}>
         <img src="/logo-original.svg" alt="Clawpoly" className={styles.footerLogo} />
-        <p>Clawpoly &mdash; Ocean Depths Await</p>
+        <p>Clawpoly - Ocean Depths Await</p>
         <div className={styles.footerLinks}>
           <a href="/lobby">Lobby</a>
-          <a href="/games">Games</a>
-          <a>Leaderboard</a>
+          <a href="/leaderboard">Leaderboard</a>
           <a href="/docs">Docs</a>
         </div>
       </footer>
