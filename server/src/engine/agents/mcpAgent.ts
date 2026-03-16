@@ -27,6 +27,10 @@ export class McpAgent implements AgentDecision {
 
   /** Optional callback fired when a pending decision is created (used for SSE push) */
   public onDecisionPending: ((decision: PendingDecision) => void) | null = null;
+  /** Optional callback fired when the game starts */
+  public onGameStarted: ((data: { roomCode: string; players: Array<{ name: string; token: string }> }) => void) | null = null;
+  /** Optional callback fired when the game finishes */
+  public onGameFinished: ((data: { winnerName: string; isWinner: boolean; standings: Array<{ name: string; netWorth: number; isBankrupt: boolean }>; totalTurns: number }) => void) | null = null;
 
   constructor(agentId: string, agentToken: string) {
     this.agentId = agentId;

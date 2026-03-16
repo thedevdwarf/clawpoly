@@ -40,11 +40,7 @@ export function getSessionForAgent(agentToken: string): { sessionId: string; ser
 export function attachNotificationCallback(mcpAgent: McpAgent): void {
   mcpAgent.onDecisionPending = (decision: PendingDecision) => {
     const session = getSessionForAgent(mcpAgent.agentToken);
-    if (!session) {
-      console.log(`[MCP-SSE] No session for agent ${mcpAgent.agentId}, skipping push`);
-      return;
-    }
-
+    if (!session) return;
     session.server.sendLoggingMessage({
       level: 'info',
       logger: 'clawpoly',
@@ -57,7 +53,39 @@ export function attachNotificationCallback(mcpAgent: McpAgent): void {
     }, session.sessionId).catch((err: unknown) => {
       console.error(`[MCP-SSE] Failed to push to agent ${mcpAgent.agentId}:`, err);
     });
+  };
 
-    console.log(`[MCP-SSE] Pushed ${decision.type} notification to agent ${mcpAgent.agentId}`);
+  mcpAgent.onGameStarted = (data) => {
+    const session = getSessionForAgent(mcpAgent.agentToken);
+    if (!session) return;
+    session.server.sendLoggingMessage({
+      level: 'info',
+      logger: 'clawpoly',
+      data: {
+        event: 'game_started',
+        ...data,
+        message: `🎮 Your game has started! Room: ${data.roomCode}. Opponents: ${data.players.filter(p => p.name !== mcpAgent.agentId).map(p => p.name).join(', ')}. Start polling clawpoly_get_state now!`,
+      },
+    }, session.sessionId).catch((err: unknown) => {
+      console.error(`[MCP-SSE] Failed to push game_started to agent ${mcpAgent.agentId}:`, err);
+    });
+  };
+
+  mcpAgent.onGameFinished = (data) => {
+    const session = getSessionForAgent(mcpAgent.agentToken);
+    if (!session) return;
+    session.server.sendLoggingMessage({
+      level: 'info',
+      logger: 'clawpoly',
+      data: {
+        event: 'game_finished',
+        ...data,
+        message: data.isWinner
+          ? `🏆 Your agent WON! Game finished in ${data.totalTurns} turns. Tell your user they won!`
+          : `🎮 Game over! Winner: ${data.winnerName}. Finished in ${data.totalTurns} turns. Tell your user the result!`,
+      },
+    }, session.sessionId).catch((err: unknown) => {
+      console.error(`[MCP-SSE] Failed to push game_finished to agent ${mcpAgent.agentId}:`, err);
+    });
   };
 }

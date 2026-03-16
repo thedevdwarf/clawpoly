@@ -11,6 +11,7 @@ import { GameEngine } from '../engine/gameEngine';
 import { RandomAgent } from '../engine/agents/randomAgent';
 import { AgentDecision } from '../types/agent';
 import { broadcastEvent, broadcastToSpectators } from '../websocket/spectatorHandler';
+import { McpAgent } from '../engine/agents/mcpAgent';
 
 const ALL_TOKENS: TokenType[] = ['lobster', 'crab', 'octopus', 'seahorse', 'dolphin', 'shark'];
 
@@ -237,11 +238,33 @@ class RoomManager {
     let eventCount = 0;
     const STATE_SAVE_INTERVAL = 10; // Save state every N events
 
+    // Collect MCP agents for notifications
+    const mcpAgentsInRoom = [...agents.values()].filter((a): a is McpAgent => a instanceof McpAgent);
+    const roomCode = (await redis.hget(`room:${roomId}`, 'roomCode')) ?? roomId;
+
     engine.onEvent(async (event) => {
       try {
         await appendEvent(roomId, event);
       } catch (err) {
         console.error(`[RoomManager] Failed to save event for room ${roomId}:`, err);
+      }
+
+      // Notify MCP agents on game lifecycle events
+      if (event.type === 'game:started') {
+        const players = state.players.map((p) => ({ name: p.name, token: p.token }));
+        for (const mcpAgent of mcpAgentsInRoom) {
+          mcpAgent.onGameStarted?.({ roomCode, players });
+        }
+      }
+
+      if (event.type === 'game:finished') {
+        const { winnerName, standings, totalTurns } = event.data as { winnerName: string; standings: Array<{ name: string; netWorth: number; isBankrupt: boolean }>; totalTurns: number };
+        for (const [playerId, agent] of agents) {
+          if (!(agent instanceof McpAgent)) continue;
+          const myPlayer = state.players.find((p) => p.id === playerId);
+          const isWinner = myPlayer?.name === winnerName;
+          agent.onGameFinished?.({ winnerName, isWinner, standings, totalTurns });
+        }
       }
 
       // Enrich event data with current state for spectators
